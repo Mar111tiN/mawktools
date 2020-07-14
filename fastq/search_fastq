@@ -1,0 +1,25 @@
+#!/bin/sh
+# extract reads from a fastq that match a pattern (can contain Ns)
+# use in pipe: zcat fastq.gz | search_fastq pattern | ...
+
+pat=`echo "$1" | sed 's:[]\[\^\$\.\*\/]:\\\\&:g' | sed 's/N/\[AGCT\]?/g'`
+# echo Searching for pattern \"$pat\"
+sed -nr '
+'/$pat/' !{
+    x
+    d
+}
+2~4 {
+    '/$pat/' {
+        x
+        p
+        x
+        p
+        n
+        p
+        n
+        p
+        x
+    }
+}
+'
