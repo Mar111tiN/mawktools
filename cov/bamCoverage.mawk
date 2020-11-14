@@ -15,7 +15,7 @@
 mawk '
 
 BEGIN {
-  minCov="'${1-1}'"; # get $1 with 1 as default
+  minCov="'${1-0}'"; # get $1 with 0 as default
   cigPat = "^[0-9]+[NMDIS]";  
   # init pointer
   pos = 0;
