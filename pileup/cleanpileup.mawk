@@ -24,13 +24,13 @@ NR == 1 {
       l = substr($col,RSTART+1,RLENGTH-1);
       post = substr($col,RSTART+RLENGTH+l);
       if (indel == "-") {
-        if (match(base,/[ACGT.]/)) {
+        if (match(base,/[ACGT]/)) {
           base = "D";
         } else {
           base = "d";
         }
       } else {
-        if (match(base,/[ACGT.]/)) {
+        if (match(base,/[ACGT]/)) {
           base = "I";
         } else {
           base = "i";
