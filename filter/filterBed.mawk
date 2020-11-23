@@ -6,9 +6,12 @@
 # works only on stdin in a pipe
 
 bedFile=$1;
-echo "STOPBED" > stop.file
+# create random filename
+suffix=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 10);
+stopfile=stop.${suffix}.txt;
+echo "STOPBED" > $stopfile
 
-cat ${bedFile} stop.file - | mawk '
+cat ${bedFile} $stopfile - | mawk '
 BEGIN {
     ## INIT ######
     # useExonicCoords 
@@ -131,4 +134,4 @@ readData {  # switching to data
     }
 }'
 # cleanup
-rm stop.file;
+rm $stopfile;
