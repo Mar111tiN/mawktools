@@ -13,32 +13,33 @@ NR == 1 {
   # cycle through the reads
   for (i = 0; i++ < samples;) {
     col = (i*3) + 2;
-    # remove position traces from all $col fields
-    gsub(/\^.|\$/,"",$col);
 
-    # remove the indel traces
+    # remove position traces from all read fields
+    gsub(/\^[^\t]|\$/,"",read);
+    # 
     while (match($col,/[+-][0-9]+/)) {
-      pre = substr($col,1,RSTART-2);
-      indel = substr($col,RSTART,1); # + or -
-      base = substr($col,RSTART-1,1); # base before the deletion
-      l = substr($col,RSTART+1,RLENGTH-1);
-      post = substr($col,RSTART+RLENGTH+l);
-      if (indel == "-") {
-        if (match(base,/[ACGT]/)) {
-          base = "D";
+        pre = substr($col,1,RSTART-2);
+        indel = substr($col,RSTART,1); # + or -
+        base = substr($col,RSTART-1,1); # base before the deletion
+        l = substr($col,RSTART+1,RLENGTH-1);
+        indel_bases = substr($col,RSTART+RLENGTH,l);
+        post = substr($col,RSTART+RLENGTH+l);
+        if (indel == "-") {
+            if (match(indel_bases,/[ACGT]/)) {
+                base = "D";
+            } else {
+                base = "d";
+            }
         } else {
-          base = "d";
+            if (match(indel_bases,/[ACGT]/)) {
+                base = "I";
+            } else {
+                base = "i";
+            }            
         }
-      } else {
-        if (match(base,/[ACGT]/)) {
-          base = "I";
-        } else {
-          base = "i";
-        }            
-      }
-      $col = pre base post;
-    } 
-  }
+
+        $col = pre base post;
+    }  
   # 
     
 # print all fields
