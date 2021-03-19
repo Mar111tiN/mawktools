@@ -12,7 +12,7 @@ WINDOW=${1-100}; # Window Size for rolling GC
 
 LEN=${2-10};  # length of primary split window
 LINE=${3-50};  ######## line length in genome file
-
+THREADS=8;
 ################################
 # SPLIT LINES
 ################################
@@ -207,5 +207,4 @@ END {
         # else, up the pointer (pointer > L --> L=1)
         pointer = (pointer)%L + 1;
     }
-}
-'
+}' | gzip
