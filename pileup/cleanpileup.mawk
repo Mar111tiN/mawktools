@@ -8,44 +8,48 @@
 mawk '
 NR == 1 {
     samples = (NF - 3) / 3;
+    printf("Chr\tStart\tRef");
+    for (s=0;s++<samples;) {
+        printf("\tDepth%s\tRead%s",s,s);
+    }
+    printf("\n");
 }
-{
-  # cycle through the reads
-  for (i = 0; i++ < samples;) {
-    col = (i*3) + 2;
+{   
+    # print generic fields
+    printf($1);
+    for (c=1;c++<3;) {
+        printf("\t%s",$c);
+    }
 
-    # remove position traces from all read fields
-    gsub(/\^[^\t]|\$/,"",read);
-    # 
-    while (match($col,/[+-][0-9]+/)) {
-        pre = substr($col,1,RSTART-2);
-        indel = substr($col,RSTART,1); # + or -
-        base = substr($col,RSTART-1,1); # base before the deletion
-        l = substr($col,RSTART+1,RLENGTH-1);
-        indel_bases = substr($col,RSTART+RLENGTH,l);
-        post = substr($col,RSTART+RLENGTH+l);
-        if (indel == "-") {
-            if (match(indel_bases,/[ACGT]/)) {
-                base = "D";
+    # cycle through the reads
+    for (i = 0; i++ < samples;) {
+        col = (i*3) + 2;
+        # remove position traces from all read fields
+        gsub(/\^[^\t]|\$/,"",$col);
+        # 
+        while (match($col,/[+-][0-9]+/)) {
+            pre = substr($col,1,RSTART-2);
+            indel = substr($col,RSTART,1); # + or -
+            base = substr($col,RSTART-1,1); # base before the deletion
+            l = substr($col,RSTART+1,RLENGTH-1);
+            indel_bases = substr($col,RSTART+RLENGTH,l);
+            post = substr($col,RSTART+RLENGTH+l);
+            if (indel == "-") {
+                if (match(indel_bases,/[ACGT]/)) {
+                    base = "D";
+                } else {
+                    base = "d";
+                }
             } else {
-                base = "d";
+                if (match(indel_bases,/[ACGT]/)) {
+                    base = "I";
+                } else {
+                    base = "i";
+                }            
             }
-        } else {
-            if (match(indel_bases,/[ACGT]/)) {
-                base = "I";
-            } else {
-                base = "i";
-            }            
+            $col = pre base post;
         }
-
-        $col = pre base post;
-    }  
-  # 
-    
-# print all fields
-  printf("%s",$1);
-  for (i=1; i++ < NF;) {
-    printf("\t%s",$i);
-  }
-  printf("\n");
-}'
+        printf("\t%s\t%s",$(col-1),$col);
+    }
+    printf("\n");
+}   '
