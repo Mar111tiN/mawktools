@@ -1,17 +1,13 @@
 #!/bin/sh
 
-# file with genomic pos in Pos | filterBed <bedfile> [=0|1..useExonicCoords] [chrom ..which chrom to use; default all]
+# file with genomic pos in Pos (!MUST HAVE HEADER!!) | filterBed <bedfile> [=0|1..useExonicCoords] [chrom ..which chrom to use; default all]
 # filters any position-based file to positions included in a bed file
 # takes bedfile and as parameter
 # works only on stdin in a pipe
 
 bedFile=$1;
-# create random filename
-suffix=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 10);
-stopfile=stop.${suffix}.txt;
-echo "STOPBED" > $stopfile
 
-cat ${bedFile} $stopfile - | mawk '
+cat ${bedFile} - | mawk '
 BEGIN {
     ## INIT ######
     # useExonicCoords 
@@ -37,7 +33,7 @@ BEGIN {
 }
 
 readBed {
-    if ($0 !~ "STOPBED") { # reading bedFile line with right chromosome
+    if  ($0 !~ "Chr\tStart\t") { # reading bedFile line with right chromosome
         # store the bed regions as blocks in BEDSTART and BEDEND
         if ( $1 !~ filterChrom ) {
             next;
@@ -63,32 +59,32 @@ readBed {
         # #####
 
         BEDSUM[bedCount] = exonicCoord;
+        next;
     } else { # reached end of bedfile
             # switch to HEADER mode
             readBed = 0;
             writeHeader = 1;
     }
-    next;
 }
 
 ########## HEADER #######################
 writeHeader { # check for existence of header and print out
-  CHROMEND[currentChrom] = bedCount
-  writeHeader = 0;
-  readData = 1;
-  chromCount = 1;
-  currentChrom = CHROMNAME[1]; # reset the current chrom to the first one
+    CHROMEND[currentChrom] = bedCount
+    writeHeader = 0;
+    readData = 1;
+    chromCount = 1;
+    currentChrom = CHROMNAME[1]; # reset the current chrom to the first one
 
-  # for (cc in CHROMSTART) {
-  #   print(cc, CHROMSTART[cc]);
-  # }
-    if ($0 ~ "Chr\t") { 
-        printf($0);
-        if (useExonicCoords == 1) {
-            printf("\tXPos");
-        }
-            printf("\n");
-            next;
+    # for (cc in CHROMSTART) {
+    #   print(cc, CHROMSTART[cc]);
+    # }
+    if  ($0 ~ "Chr\t") { 
+            printf($0);
+            if (useExonicCoords == 1) {
+                printf("\tExonPos");
+            }
+                printf("\n");
+                next;
         } else { # move on to readData on same line
             print("<filterBedAll> No header detected") > "/dev/stderr";
         }
@@ -133,5 +129,3 @@ readData {  # switching to data
         }
     }
 }'
-# cleanup
-rm $stopfile;
