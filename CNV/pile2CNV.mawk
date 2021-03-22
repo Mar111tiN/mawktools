@@ -154,7 +154,7 @@ NR == 1 {
 
     for (s=0; s++ < samples;) {
         printf("\tCov%s", s);
-        printf("\tVAF%s", s) >> snpFile;
+        printf("\tDepth%s\tVAF%s", s, s) >> snpFile;
         # COL stores the col number for each sample
         COL[s] = 2 + (2 * s);
 
@@ -173,7 +173,20 @@ NR == 1 {
 }
 
 ######## VAF detection ###############
-$refCol ~ /[.,]*[AaCcTtGgDdI]+[.,]*/ {
+$refCol ~ /[AaCcTtGgDdI]/ {
+
+
+    printf("%s\t%s", $1,$2);
+
+
+    for (s in samples) {
+        alt=gsub(/[AaCcTtGgDdI]/, "", COL[s])
+    }
+
+    # printf("%.2f")
+
+    # output
+
     print($0) >> snpFile;
     a=1;
 }
