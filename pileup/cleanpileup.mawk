@@ -5,6 +5,7 @@
 # cleanpileup takes extra care not to change any of the quality fields 
 # .. which might accidentally contain such traces
 # next, the A+12T for inserts and the T-12A for deletions will be converted to I/i and D/d
+
 mawk '
 NR == 1 {
     samples = (NF - 3) / 3;

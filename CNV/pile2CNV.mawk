@@ -8,37 +8,137 @@
 # 	Chr	Start	Ref	Cov1	Read1	Cov2	Read2	...	CovN	ReadN	[ ExonPos ]	
 
 # USAGE: 
-# samtools mpileup -f $HG38 -q 20 -Q 25 -l $BED -r chr? | filterBed $BED 1 chr? |
-# pile2CNV snp_file [minCoverage=0] []
+# samtools mpileup -f $HG38 -q 20 -Q 25 -l $BED -r chr? | cleanpileup | filterBed $BED 1 chr? | pile2CNV
+# [     -m | --min-coverage]        <INT=0>                     minimum coverage for output         ]
+# [     -x | --keep-exon-pos        <Flag=False>                if exonPos should be used           ]
+# [     -w | --coverage-window-size <Int=100>                   size of rolling window for coverage ]
+# [     -s | --step-size            <INT=10>                    distance of adjacent windows        ]
+# [     -o | --output-snp-file      <path to snp file>          snp_file for the heteroSNP output   ]
+# [     -v|--min-vaf|--min-VAF      <INT=0>                     minimum VAF for heteroSNP output    ]
+# [     -d|--min-depth              <INT=10>                    minimum depth for heteroSNP output  ]                
 
 # OUTPUT
 # Chr Start [ExonPos] Ref Depth1 Read1 Depth2	Read2...
 # last sample should be the reference sample
-# ARGUMENTS:
-# 	ARG1: output file for redirected SNP-file
-#   ARG2: minCoverage for output
-#   ARG3: coverage Window
-#   ARG4: step size for new Window
+
+
+####### ARGPARSE ##################
+PARAMS=""
+while (( "$#" )); do
+    # allow for equal sign in long-format options
+    [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
+    case "$1" in
+        -x|--keep-exon-pos)
+        keepExon=1
+        shift
+        ;;
+        # snp_file output
+        -o|--output-snp-file)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            snpFile=$2
+            shift 2
+        else
+            echo "<pile2CNV> Error: output file for heteroSNP is missing\n[-o|--output-snp-file]" >&2
+            exit 1
+        fi
+        ;;
+        # minimum coverage
+        -c|--min-coverage)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            minCov=$2
+            shift 2
+        else
+            echo "<pile2CNV> Error: Argument for $1 is missing" >&2
+            exit 1
+        fi
+        ;;
+        # coverage Window
+        -w|--coverage-window-size)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            covWindow=$2
+            shift 2
+        else
+            echo "<pile2CNV> Error: Provide size for coverage window [-w|--coverage-window-size (default=100)]" >&2
+            exit 1
+        fi
+        ;;
+        # step Size
+        -s|--step-size)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            stepSize=$2
+            shift 2
+        else
+            echo "<pile2CNV> Error: Provide size for step size [-s|--step-size (default=10)]" >&2
+            exit 1
+        fi
+        ;;
+        # minVAF
+        -v|--min-vaf|--min-VAF)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            minVAF=$2
+            shift 2
+        else
+            echo "<pile2CNV> Error: Provide minimum VAF for heteroSNP output [-v|--min-vaf (default=0)]" >&2
+            exit 1
+        fi
+        ;;
+        # minDepth
+        -d|--min-depth)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            minDepth=$2
+            shift 2
+        else
+            echo "<pile2CNV> Error: Provide minimum VAF for heteroSNP output [-d|--min-depth (default=10)]" >&2
+            exit 1
+        fi
+        ;;
+        -*|--*=) # unsupported flags
+        echo "<pile2CNV> Error: Unsupported flag $1" >&2
+        exit 1
+        ;;
+        *) # preserve positional arguments
+        PARAMS="$PARAMS $1"
+        shift
+        ;;
+    esac
+done
+
+snpFile=${snpFile-"test.snp"};
+covWindow=${covWindow-100};
+minCov=${minCov-0};
+stepSize=${stepSize-10};
+minVAF=${minVAF-0};
+minDepth=${minDepth-10};
+
+### DEBUG ######
+# echo "snpFile:" $snpFile;
+# echo "minCoverage: " $minCov;
+# echo "windowSize: " $covWindow;
+# echo "stepSize:" $stepSize;
+# echo "minVAF:" $minVAF;
+# echo "minDepth:" $minDepth;
+### DEBUG ######
 
 mawk '
 #### BEGIN
 NR == 1 {
     ##### ARGS
-    snpFile="'${1-test}'" ".snp";
+    snpFile="'$snpFile'";
+    if (snpFile !~ ".snp") snpFile = snpFile ".snp"
     # setup SNP file and write its Header
-    printf("Writing snpData to %s\n", snpFile) >> "/dev/stderr";
-    CovWindow='${3-50}';
-    stepSize='${4-25}';
-    printf("Rolling coverage: WindowSize=%s | stepSize=%s | minCoverage=%s\n", CovWindow, stepSize, '${2-0}') >> "/dev/stderr";
+    printf("<pile2CNV> Writing snpData to %s\n", snpFile) >> "/dev/stderr";
+    covWindow='$covWindow';
+    stepSize='$stepSize';
+    printf("<pile2CNV> Rolling coverage: WindowSize=%s | stepSize=%s | minCoverage=%s\n", covWindow, stepSize, '$minCov') >> "/dev/stderr";
 
     #### INIT Length L of DATA ARRAY 
-    L=int(CovWindow / stepSize);
+    L=int(covWindow / stepSize);
 
     ###### HEADER
     baseHeader = "Chr\tStart"
     # detect XPos
-    if ($NF == "ExonPos") hasXPos = 1;
-    if (hasXPos) { 
+    if ($NF == "ExonPos" && '${keepExon-0}') {
+        hasXPos = 1;
         # print("ExonPos detected") > "/dev/stderr";
         baseHeader = baseHeader "\tExonPos";
     }
@@ -47,14 +147,14 @@ NR == 1 {
 
     # detect samples
     samples = (NF-3-hasXPos)/2;
-    print(samples, "samples detected") > "/dev/stderr"
+    print("<pile2CNV> ", samples, "samples detected") > "/dev/stderr"
 
     # assign the reference column (last read column)
     refCol = NF - hasXPos;
 
     for (s=0; s++ < samples;) {
         printf("\tCov%s", s);
-        printf("\tVAF%s", s) >> snpFile;
+        printf("\tDepth%s\tVAF%s", s, s) >> snpFile;
         # COL stores the col number for each sample
         COL[s] = 2 + (2 * s);
 
@@ -73,7 +173,20 @@ NR == 1 {
 }
 
 ######## VAF detection ###############
-$refCol ~ /[.,]*[AaCcTtGgDdI]+[.,]*/ {
+$refCol ~ /[AaCcTtGgDdI]/ {
+
+
+    printf("%s\t%s", $1,$2);
+
+
+    for (s in samples) {
+        alt=gsub(/[AaCcTtGgDdI]/, "", COL[s])
+    }
+
+    # printf("%.2f")
+
+    # output
+
     print($0) >> snpFile;
     a=1;
 }
@@ -117,7 +230,7 @@ function output(step, doReset) {
 
     for (s=0;s++<samples;) {
         # output the COVSUM array
-        printf("\t%s", COVSUM[s] / CovWindow);
+        printf("\t%s", COVSUM[s] / covWindow);
 
         ### DEBUG #####
         # if (s==1) {
@@ -144,7 +257,7 @@ function output(step, doReset) {
 
 # ######## COV detection ###############
 {
-    ### create an ARRAY for CovWindow / stepSize bins
+    ### create an ARRAY for covWindow / stepSize bins
     pos=$2;
 
     currentStep=int((pos -1) / stepSize);
@@ -190,4 +303,4 @@ function output(step, doReset) {
         # update
         lastStep=currentStep;
     }
-}' | mawk 'BEGIN{minCov='${2-0}'} NR==1 || ($NF>minCov) || ($(NF-1)>minCov)'
+}' | mawk 'BEGIN{minCov='$minCov'} NR==1 || ($NF>minCov) || ($(NF-1)>minCov)'

@@ -1,29 +1,71 @@
 #!/bin/sh
 
-# file with genomic pos in Pos (!MUST HAVE HEADER!!) | filterBed <bedfile> [=0|1..useExonicCoords] [chrom ..which chrom to use; default all]
+# file with genomic pos in Pos (!MUST HAVE HEADER!!) | filterBed <bedfile> [-x ..useExonicCoords] [-c chrom ..which chrom to use; default all]
 # filters any position-based file to positions included in a bed file
 # takes bedfile and as parameter
 # works only on stdin in a pipe
 
+
+####### ARGPARSE ##################
+PARAMS=""
+while (( "$#" )); do
+    # allow for equal sign in long-format options
+    [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
+    case "$1" in
+        -x|--use-exon-pos)
+        useExonicCoords=1
+        shift
+        ;;
+        # snp_file output
+        -c|--chrom)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            filterChrom=$2
+            shift 2
+        else
+            echo "<filterBed> Error: chromosome argument is missing\n[-c|--chrom (default=all)]" >&2
+            exit 1
+        fi
+        ;;
+        -*|--*=) # unsupported flags
+        echo "<filterBed> Error: Unsupported flag $1" >&2
+        exit 1
+        ;;
+        *) # preserve positional arguments
+        PARAMS="$PARAMS $1"
+        shift
+        ;;
+    esac
+done
+
+# I have no positional args
+# # set positional arguments in their proper place
+eval set -- "$PARAMS"
+
+useExonicCoords=${useExonicCoords-0};
+filterChrom=${filterChrom-""};
 bedFile=$1;
 
-cat ${bedFile} - | mawk '
+# echo "bedFile:" $bedFile;
+# echo "useExonicCoords:" $useExonicCoords;
+# echo "filterChrom:" $filterChrom;
+
+cat $bedFile - | mawk '
 BEGIN {
     ## INIT ######
     # useExonicCoords 
-    useExonicCoords='${2-0}';
+    useExonicCoords='$useExonicCoords';
     if (useExonicCoords == 1) {
-        printf("Printing out exonic coordinates\n") > "/dev/stderr";
+        printf("<filterBed> Printing out exonic coordinates\n") > "/dev/stderr";
     }
     # get filter chrom as arg3 for matching in filterBed file
     # "7" --> chr7
     # default ""  --> chr
-    filterChrom="'${3-""}'";
+    filterChrom="'$filterChrom'";
     if (filterChrom !~ "chr") {
         filterChrom = "chr" filterChrom;
     }
     if (filterChrom != "chr"){
-        printf("Filtering chromosome %s\n", filterChrom) > "/dev/stderr";
+        printf("<filterBed> Filtering chromosome %s\n", filterChrom) > "/dev/stderr";
     }
     readBed=1;
     bedCount=0; 
@@ -87,7 +129,7 @@ writeHeader { # check for existence of header and print out
                 printf("\n");
                 next;
         } else { # move on to readData on same line
-            print("<filterBedAll> No header detected") > "/dev/stderr";
+            print("<filterBed> <filterBedAll> No header detected") > "/dev/stderr";
         }
 }
 

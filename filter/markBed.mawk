@@ -1,23 +1,63 @@
 #!/bin/sh
 
+# ASSUMES HEADER with "Chr  Start"
 # file with genomic pos in Pos | filterBed <bedfile> [chrom ..which chrom to use] [=0|1..useExonicCoords]
 # marks any position-based file as belonging to positions included in a bed file
 # takes bedfile and as parameter
 # works only on stdin in a pipe
 
-bedFile=$1;
-# create random filename
-suffix=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 10);
-stopfile=stop.${suffix}.txt;
-echo "STOPBED" > $stopfile
+####### ARGPARSE ##################
+PARAMS=""
+while (( "$#" )); do
+    # allow for equal sign in long-format options
+    [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
+    case "$1" in
+        # -x|--use-exon-pos)
+        # useExonicCoords=1
+        # shift
+        # ;;
+        # snp_file output
+        -c|--chrom)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            filterChrom=$2
+            shift 2
+        else
+            echo "<filterBed> Error: chromosome argument is missing\n[-c|--chrom (default=all)]" >&2
+            exit 1
+        fi
+        ;;
+        -*|--*=) # unsupported flags
+        echo "<filterBed> Error: Unsupported flag $1" >&2
+        exit 1
+        ;;
+        *) # preserve positional arguments
+        PARAMS="$PARAMS $1"
+        shift
+        ;;
+    esac
+done
 
-cat ${bedFile} $stopfile - | mawk '
+# I have no positional args
+# # set positional arguments in their proper place
+eval set -- "$PARAMS"
+
+# maybe implement output of exonic coords
+# useExonicCoords=${useExonicCoords-0};
+filterChrom=${filterChrom-""};
+bedFile=$1;
+
+# echo "bedFile:" $bedFile;
+# echo "useExonicCoords:" $useExonicCoords;
+# echo "filterChrom:" $filterChrom;
+
+
+cat $bedFile - | mawk '
 BEGIN {
     ## INIT ######
     # get filter chrom as arg3 for matching in filterBed file
     # "7" --> chr7
     # default ""  --> chr
-    filterChrom="'${2-""}'";
+    filterChrom="'$filterChrom'";
     if (filterChrom !~ "chr") {
         filterChrom = "chr" filterChrom;
     }
@@ -32,7 +72,7 @@ BEGIN {
 }
 
 readBed {
-    if ($0 !~ "STOPBED") { # reading bedFile line with right chromosome
+    if ($0 !~ "Chr\tStart\t") { # reading bedFile line with right chromosome
         # store the bed regions as blocks in BEDSTART and BEDEND
         if ( $1 !~ filterChrom ) {
             next;
@@ -72,11 +112,10 @@ writeHeader { # check for existence of header and print out
   #   print(cc, CHROMSTART[cc]);
   # }
     if ($0 ~ "Chr\t") { 
-        printf($0);
-            printf("\tonTarget\n");
+            printf("%s\tonTarget\n", $0);
             next;
         } else { # move on to readData on same line
-            print("<filterBedAll> No header detected") > "/dev/stderr";
+            print("<markBed> No header detected") > "/dev/stderr";
         }
 }
 
@@ -140,5 +179,3 @@ readData {  # switching to data
 flush { # after last bedPointer has been reached, flush out the remaining data
     print($0, "0");
 }'
-# cleanup
-rm $stopfile;
