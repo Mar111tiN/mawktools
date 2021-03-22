@@ -8,21 +8,25 @@
 # 	Chr	Start	Ref	Cov1	Read1	Cov2	Read2	...	CovN	ReadN	[ ExonPos ]	
 
 # USAGE: 
-# samtools mpileup -f $HG38 -q 20 -Q 25 -l $BED -r chr? | cleanpileup | filterBed $BED 1 chr? |
-# pile2CNV snp_file [minCoverage=0] []
+# samtools mpileup -f $HG38 -q 20 -Q 25 -l $BED -r chr? | cleanpileup | filterBed $BED 1 chr? | pile2CNV
+# [     -m | --min-coverage]        <INT=0>                     minimum coverage for output         ]
+# [     -x | --keep-exon-pos        <Flag=False>                if exonPos should be used           ]
+# [     -w | --coverage-window-size <Int=100>                   size of rolling window for coverage ]
+# [     -s | --step-size            <INT=10>                    distance of adjacent windows        ]
+# [     -o | --output-snp-file      <path to snp file>          snp_file for the heteroSNP output   ]
+# [     -v|--min-vaf|--min-VAF      <INT=0>                     minimum VAF for heteroSNP output    ]
+# [     -d|--min-depth              <INT=10>                    minimum depth for heteroSNP output  ]                
 
 # OUTPUT
 # Chr Start [ExonPos] Ref Depth1 Read1 Depth2	Read2...
 # last sample should be the reference sample
-# ARGUMENTS:
-# 	ARG1: output file for redirected SNP-file
-#   ARG2: minCoverage for output
-#   ARG3: coverage Window
-#   ARG4: step size for new Window
+
 
 ####### ARGPARSE ##################
 PARAMS=""
 while (( "$#" )); do
+    # allow for equal sign in long-format options
+    [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
     case "$1" in
         -x|--keep-exon-pos)
         keepExon=1
@@ -61,7 +65,7 @@ while (( "$#" )); do
         # step Size
         -s|--step-size)
         if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
-            covWindow=$2
+            stepSize=$2
             shift 2
         else
             echo "<pile2CNV> Error: Provide size for step size [-s|--step-size (default=10)]" >&2
@@ -69,7 +73,7 @@ while (( "$#" )); do
         fi
         ;;
         # minVAF
-        -v|--min-vaf|min-VAF)
+        -v|--min-vaf|--min-VAF)
         if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
             minVAF=$2
             shift 2
@@ -122,10 +126,10 @@ NR == 1 {
     snpFile="'$snpFile'";
     if (snpFile !~ ".snp") snpFile = snpFile ".snp"
     # setup SNP file and write its Header
-    printf("Writing snpData to %s\n", snpFile) >> "/dev/stderr";
+    printf("<pile2CNV> Writing snpData to %s\n", snpFile) >> "/dev/stderr";
     covWindow='$covWindow';
     stepSize='$stepSize';
-    printf("Rolling coverage: WindowSize=%s | stepSize=%s | minCoverage=%s\n", covWindow, stepSize, '$minCov') >> "/dev/stderr";
+    printf("<pile2CNV> Rolling coverage: WindowSize=%s | stepSize=%s | minCoverage=%s\n", covWindow, stepSize, '$minCov') >> "/dev/stderr";
 
     #### INIT Length L of DATA ARRAY 
     L=int(covWindow / stepSize);
@@ -133,8 +137,8 @@ NR == 1 {
     ###### HEADER
     baseHeader = "Chr\tStart"
     # detect XPos
-    if ($NF == "ExonPos") hasXPos = 1;
-    if (hasXPos) { 
+    if ($NF == "ExonPos" && '${keepExon-0}') {
+        hasXPos = 1;
         # print("ExonPos detected") > "/dev/stderr";
         baseHeader = baseHeader "\tExonPos";
     }
@@ -143,7 +147,7 @@ NR == 1 {
 
     # detect samples
     samples = (NF-3-hasXPos)/2;
-    print(samples, "samples detected") > "/dev/stderr"
+    print("<pile2CNV> ", samples, "samples detected") > "/dev/stderr"
 
     # assign the reference column (last read column)
     refCol = NF - hasXPos;
