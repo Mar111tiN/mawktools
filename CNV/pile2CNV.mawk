@@ -9,7 +9,7 @@
 
 # USAGE: 
 # samtools mpileup -f $HG38 -q 20 -Q 25 -l $BED -r chr? | filterBed $BED 1 chr? |
-# pile2CNV snp_file
+# pile2CNV snp_file [minCoverage=0] []
 
 # OUTPUT
 # Chr Start [ExonPos] Ref Depth1 Read1 Depth2	Read2...
@@ -74,8 +74,6 @@ NR == 1 {
 
 ######## VAF detection ###############
 $refCol ~ /[.,]*[AaCcTtGgDdI]+[.,]*/ {
-
-
     print($0) >> snpFile;
     a=1;
 }
@@ -83,7 +81,7 @@ $refCol ~ /[.,]*[AaCcTtGgDdI]+[.,]*/ {
 
 ##### COV detection first row
 NR == 2 {
-    ## get the exonShift
+    ## get the exonShift 
     if (hasXPos) {
         exonShift=$2-$NF;
         # print("ExonShift", exonShift)

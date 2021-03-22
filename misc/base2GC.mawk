@@ -3,6 +3,8 @@
 # USAGE:
 # cat chrom.fa | base2GC [primarywindow=10bp] []-->
 
+# ARGS
+
 # OUTPUT:
 # HEADER    Start   GC/AT
 #           51      0.3
@@ -10,7 +12,7 @@
 
 WINDOW=${1-100}; # Window Size for rolling GC
 
-LEN=${2-10};  # length of primary split window
+stepSize=${2-10};  # length of primary split window
 LINE=${3-50};  ######## line length in genome file
 THREADS=8;
 ################################
@@ -20,10 +22,10 @@ mawk '
 NR == 1 {
 
 
-    LEN='$LEN';
+    stepSize='$stepSize';
     # make the split pattern from the desired length
     dot=".";
-    for (i=0;i++<LEN;) {
+    for (i=0;i++<stepSize;) {
         pattern = pattern dot;
     }
     next;
@@ -39,13 +41,13 @@ NR == 1 {
     print("-N-");
 }' | mawk '
 
-################################
-# COMPUTE PRIMARY WINDOW
-################################
+###############################
+COMPUTE PRIMARY WINDOW
+###############################
 
 NR ==1 {
     # get the arguments from bash
-    LEN='$LEN';
+    stepSize='$stepSize';
     LINE='$LINE';
     cols="Start,GC/AT";
     split(cols,COLS,",");
@@ -62,9 +64,9 @@ NR ==1 {
 {
     GC = gsub("C", "", $0);
     N = gsub("N", "", $0);
-    ratio = (GC + (N/2)) / LEN;
+    ratio = (GC + (N/2)) / stepSize;
     printf("%s\t%s\n",basePos, ratio);
-    basePos+=LEN;
+    basePos+=stepSize;
 }' | mawk '
 
 ################################
@@ -74,13 +76,12 @@ NR ==1 {
 NR==1 {
     # get the arguments from bash args
     WIN='$WINDOW';  # window size
-    LEN='$LEN'; # base interval of GC input
+    stepSize='$stepSize'; # base interval of GC input
 
-    L=WIN/LEN; # length of HOLD ARRAY
-
+    L=WIN/stepSize; # length of HOLD ARRAY
     # the shift for getting the center of the window corresp to coords
-    shift=(WIN / 2) - LEN + 1;
-    # printf("WIN:%s,LEN:%s,L:%s,shift:%s\n",WIN,LEN,L,shift)
+    shift=(WIN / 2) - stepSize + 1;
+    # printf("WIN:%s,stepSize:%s,L:%s,shift:%s\n",WIN,stepSize,L,shift)
     ########## SHOW ARRAY
     # for (i=0; i++<L;) {
     #     print(i,HOLD[i]);
@@ -91,69 +92,39 @@ NR==1 {
     # in case the first row already has bases
     # INIT THE HOLD pointer as full
     pointer=10;
-    coord=-10000;
+    lastPos=-10000;
 
     ## print the header
     print;
     next;
 }
 
-function update( HOLD, SUM, coords, pointer, minus, plus, L,  i) {
+
+function update(minus, plus) {
+
+
 
     # remove TAIL
     SUM -= minus;
     # add new TIP
     HOLD[pointer] = plus;
     SUM += plus;
+    printf("%s\t%.2f\n",lastPos-shift, SUM/L);
 
-    if (pointer%(L/2)==0) {
     ####=== DEBUG ===####
         # for (i=0;i++<L;){
         #     print(i, HOLD[i]);
         # }
     ####^^^ DEBUG ^^^####
 
-    printf("%s\t%.2f\n",coords, SUM/L);
-    }
     return SUM
 }
 
-# if coord difference is greater than 10
-# we have a jump --> 
-# find the pointer position based on coords
-# fill up the array and flush
-$1 - coord > LEN {
-    # cycle through pointer until original pointer position
+NR==2 {
 
-    # keep the last pointer position
-    lastPointer = pointer;
-    # up the pointer (pointer > L --> L=1)
-    pointer = (pointer)%L + 1;
-    ###
-    # print("JUMP", coord, "-->", $1);
-    ###
-    # increase current coords until new position is reached OR 
-    # one round through pointers is finished
-    # break while if coords < 0 (start)
-    if (coord > 0) {
-        while (pointer != lastPointer) {
-            # increase coord with every step
-            coord += LEN;
-            SUM = update(HOLD, SUM, coord-shift, pointer, HOLD[pointer], 0.5, L)
-            # new position is reached
-            if (coord >= $1) {
-                # update coords and exit
-                coord=$1;
-                next;
-            }
-            # else, up the pointer (pointer > L --> L=1)
-            pointer = (pointer)%L + 1;
-        }
-    }
-
-    ######### GAP TOO LARGE
+    # action for first row
     # find the pointer from the base position
-    pointer=(($1-1) % WIN) / LEN + 1;
+    pointer=(($1-1) % WIN) / stepSize + 1;
     # print("NewPointerPos",newPointer);
     
     # fill up the HOLD 
@@ -163,17 +134,60 @@ $1 - coord > LEN {
         p=(pointer + i-1)%L + 1
         HOLD[p]=0.5;
     }
-    # update coord
-    coord=$1;   
+    # update lastPos
+    lastPos=$1;   
     # add the new position
-    SUM = update(HOLD, SUM, coord-shift, pointer, 0.5, $2, L)
+    update(0.5, $2)
+    next;
+}
 
-    ####
-    # print($1, pointer);
-    ####
+# if pos difference is greater than stepSize we have a jump --> 
+# find the pointer position based on lastPos
+# fill up the array and flush
 
- 
-    # print($0, pointer);
+$1 - lastPos > stepSize {
+    # cycle through pointer until original pointer position
+
+    # keep the last pointer position
+    lastPointer = pointer;
+    # up the pointer (pointer > L --> L=1)
+    pointer = (pointer)%L + 1;
+    ###
+    # print("JUMP", lastPos, "-->", $1);
+    ###
+    # increase current coords until new position is reached OR 
+    # one round through pointers is finished
+
+    while (pointer != lastPointer) {
+        # increase coord with every step
+        lastPos += stepSize;
+        update(HOLD[pointer], 0.5)
+        # new position is reached
+        if (lastPos >= $1) {
+            # update lastPos and exit 
+            lastPos=$1;
+            next;
+        }
+        # else, up the pointer (pointer > L --> L=1)
+        pointer = (pointer)%L + 1;
+    }
+
+    ######### GAP TOO LARGE
+    # find the pointer from the base position
+    pointer=(($1-1) % WIN) / stepSize + 1;
+    # print("NewPointerPos",newPointer);
+    
+    # fill up the HOLD 
+    # re-init a neutral HOLD and its SUM
+    SUM=L*0.5;
+    for (i=0; i++ < L;){
+        p=(pointer + i-1)%L + 1
+        HOLD[p]=0.5;
+    }
+    # update lastPos
+    lastPos=$1;   
+    # add the new position
+    update(0.5, $2)
     next;
 }
 
@@ -181,17 +195,15 @@ $1 - coord > LEN {
 {   
     # up the pointer (pointer > L --> L=1)
     pointer = (pointer)%L + 1;
+    lastPos=$1;
 
-    ####
-    # print($1, pointer);
-    ####
+    update(HOLD[pointer], $2)
 
-    SUM = update(HOLD, SUM, $1- shift, pointer, HOLD[pointer], $2, L)
-
-    # move pointer up by one and flush if at 50
-    # update coord
-    coord=$1;
+    # move pointer up by one and flush if at StepBorder
+    # update lastPos
+    lastPos=$1;
 }
+
 END {
     ## final flush
     # keep the last pointer position
@@ -199,11 +211,11 @@ END {
     # up the pointer (pointer > L --> L=1)
     pointer = (pointer)%L + 1;
         # one round through pointers is finished
-    # break while if coords < 0 (start)
+
     while (pointer != lastPointer) {
-        # increase coord with every step
-        coord += LEN;
-        SUM = update(HOLD, SUM, coord-shift, pointer, HOLD[pointer], 0.5, L)
+        # increase lastPos with every step
+        lastPos += stepSize;
+        update(HOLD[pointer], 0.5)
         # else, up the pointer (pointer > L --> L=1)
         pointer = (pointer)%L + 1;
     }
