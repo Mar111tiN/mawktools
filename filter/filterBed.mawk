@@ -53,7 +53,7 @@ readBed {
         BEDEND[bedCount] = $3;
         # exonicCoord will be increased by the length of the bed fragment
         # BEDSUM marks the exonic coords of the bed fragments end (defined by bedCount)
-        exonicCoord = exonicCoord + $3 - $2;
+        exonicCoord = exonicCoord + $3 - $2 +1;
         # #####
         # print(bedCount,BEDSTART[bedCount], BEDEND[bedCount], exonicCoord, BEDSUM[bedCount]);
         # #####
@@ -69,6 +69,7 @@ readBed {
 
 ########## HEADER #######################
 writeHeader { # check for existence of header and print out
+
     CHROMEND[currentChrom] = bedCount
     writeHeader = 0;
     readData = 1;
@@ -103,12 +104,14 @@ readData {  # switching to data
     while (chrom != currentChrom) {
         currentChrom = CHROMCOUNT[++chromeCount];
         bedPointer = CHROMSTART[currentChrom];
+        
     }
-  
+    print("START:", bedPointer, BEDSTART[bedPointer])
     # cycle through the bedRegions
     while (pos >= BEDSTART[bedPointer] ) { # if pos downstream of current bedRegion, drop line silently
         #print(bedPointer, BEDSTART[bedPointer], BEDEND[bedPointer], pos);
         if (pos > BEDEND[bedPointer]) { # step to next bedRegion
+            print("TOO LOW:", bedPointer, BEDSTART[bedPointer], BEDEND[bedPointer])
             bedPointer++;
             # if all bedRegions have been read, stop output
             if (bedPointer > bedCount) exit 0;
@@ -116,12 +119,12 @@ readData {  # switching to data
             if (bedPointer > CHROMEND[currentChrom]) next;
         } else { # write to file
             # DEBUG############
-            # print(bedPointer, BEDSUM[bedPointer], BEDSTART[bedPointer], BEDEND[bedPointer]);
+            print(bedPointer, BEDSUM[bedPointer], BEDSTART[bedPointer], BEDEND[bedPointer]);
             # DEBUG ########## 
             # print the base data
             printf($0);
             if (useExonicCoords==1) {
-                exonicCoord=BEDSUM[bedPointer] - BEDEND[bedPointer] + pos;
+                exonicCoord=BEDSUM[bedPointer] - BEDSTART[bedPointer] + pos;
                 printf("\t%s", exonicCoord);
             }
             printf("\n"); 
