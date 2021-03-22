@@ -106,7 +106,6 @@ readData {  # switching to data
         bedPointer = CHROMSTART[currentChrom];
         
     }
-    print("START:", bedPointer, BEDSTART[bedPointer])
     # cycle through the bedRegions
     while (pos >= BEDSTART[bedPointer] ) { # if pos downstream of current bedRegion, drop line silently
         #print(bedPointer, BEDSTART[bedPointer], BEDEND[bedPointer], pos);
