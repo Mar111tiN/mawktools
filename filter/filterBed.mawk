@@ -111,16 +111,17 @@ readData {  # switching to data
     while (pos >= BEDSTART[bedPointer] ) { # if pos downstream of current bedRegion, drop line silently
         #print(bedPointer, BEDSTART[bedPointer], BEDEND[bedPointer], pos);
         if (pos > BEDEND[bedPointer]) { # step to next bedRegion
-            print("TOO LOW:", bedPointer, BEDSTART[bedPointer], BEDEND[bedPointer])
             bedPointer++;
             # if all bedRegions have been read, stop output
             if (bedPointer > bedCount) exit 0;
             # if bedpointer is in next chrom, skip
             if (bedPointer > CHROMEND[currentChrom]) next;
         } else { # write to file
+
             # DEBUG############
-            print(bedPointer, BEDSUM[bedPointer], BEDSTART[bedPointer], BEDEND[bedPointer]);
+            # print(bedPointer, BEDSUM[bedPointer], BEDSTART[bedPointer], BEDEND[bedPointer]);
             # DEBUG ########## 
+
             # print the base data
             printf($0);
             if (useExonicCoords==1) {
