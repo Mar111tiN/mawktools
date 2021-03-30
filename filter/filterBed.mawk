@@ -63,12 +63,16 @@ BEGIN {
 
     printf("<filterBed> Reading bed file %s\n", "'$bedFile'") > "/dev/stderr";
     filterChrom="'$filterChrom'";
+    # handle the filterChrom
+    # convert integer chrom to chr-chrom
     if (filterChrom !~ "chr") {
         filterChrom = "chr" filterChrom;
     }
-    if (filterChrom != "chr"){
-        printf("<filterBed> Filtering chromosome %s\n", filterChrom) > "/dev/stderr";
-        filterChrom = filterChrom + "\t";
+    
+    if (filterChrom != "chr"){ # no filterChrom given --> filterChrom == "chr"
+        # adjust the chrom-pattern for exact chrom match
+        filterChrom = "^" filterChrom "\t";
+        printf("<filterBed> Filtering chromosome %s|\n", filterChrom) > "/dev/stderr";
     }
     readBed=1;
     bedCount=0; 
@@ -78,10 +82,10 @@ BEGIN {
 }
 
 readBed {
-    print(filterChrom);
+    # print(filterChrom);
     if  ($0 !~ "Chr\tStart\t") { # reading bedFile line with right chromosome
         # store the bed regions as blocks in BEDSTART and BEDEND
-        if ( $1 !~ filterChrom ) {
+        if ( $0 !~ filterChrom ) {
             next;
         }
         bedCount++;
@@ -108,7 +112,6 @@ readBed {
         next;
     } else { # reached end of bedfile
             # switch to HEADER mode
-            print("END");
             readBed = 0;
             writeHeader = 1;
     }
@@ -143,7 +146,8 @@ readData {  # switching to data
     # get data
     chrom=$1;
     pos=$2;
-    print($1)
+   
+    #  print($1)
     # check if chrom is contained in bedfile
     if (chrom in CHROMSTART == 0) next;
     # move to the right chromosome in the read file
