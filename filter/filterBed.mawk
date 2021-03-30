@@ -52,7 +52,7 @@ bedFile=$1;
 cat $bedFile - | mawk '
 BEGIN {
     ## INIT ######
-    # useExonicCoords 
+    # useExonicCoords
     useExonicCoords='$useExonicCoords';
     if (useExonicCoords == 1) {
         printf("<filterBed> Printing out exonic coordinates\n") > "/dev/stderr";
@@ -60,12 +60,15 @@ BEGIN {
     # get filter chrom as arg3 for matching in filterBed file
     # "7" --> chr7
     # default ""  --> chr
+
+    printf("<filterBed> Reading bed file %s\n", "'$bedFile'") > "/dev/stderr";
     filterChrom="'$filterChrom'";
     if (filterChrom !~ "chr") {
         filterChrom = "chr" filterChrom;
     }
     if (filterChrom != "chr"){
         printf("<filterBed> Filtering chromosome %s\n", filterChrom) > "/dev/stderr";
+        filterChrom = filterChrom + "\t";
     }
     readBed=1;
     bedCount=0; 
@@ -75,6 +78,7 @@ BEGIN {
 }
 
 readBed {
+    print(filterChrom);
     if  ($0 !~ "Chr\tStart\t") { # reading bedFile line with right chromosome
         # store the bed regions as blocks in BEDSTART and BEDEND
         if ( $1 !~ filterChrom ) {
@@ -104,6 +108,7 @@ readBed {
         next;
     } else { # reached end of bedfile
             # switch to HEADER mode
+            print("END");
             readBed = 0;
             writeHeader = 1;
     }
@@ -138,7 +143,7 @@ readData {  # switching to data
     # get data
     chrom=$1;
     pos=$2;
-    
+    print($1)
     # check if chrom is contained in bedfile
     if (chrom in CHROMSTART == 0) next;
     # move to the right chromosome in the read file
