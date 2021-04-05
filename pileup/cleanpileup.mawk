@@ -1,5 +1,6 @@
 #!/bin/sh
 
+#v1.1.0
 ### cleans samtools mpileup output
 # first any end-of-read markers like ^I or ^[ will be removed
 # cleanpileup takes extra care not to change any of the quality fields 
@@ -18,8 +19,18 @@ while (( "$#" )); do
         outputDepth=1;
         shift;
         ;;
+        # reduce output samples
+        # required if the input is mpileup for tumor and normal (only normal is required)
+        -s|--use-samples)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            useSamples=$2;
+            shift 2;
+        else
+            echo "<cleanpileup> Error: sample count argument is missing\n[-s|--use-samples (default=all)]" >&2
+            exit 1;
+        fi;;
         -*|--*=) # unsupported flags
-        echo "<filterBed> Error: Unsupported flag $1" >&2
+        echo "<cleanpileup> Error: Unsupported flag $1" >&2
         exit 1
         ;;
         *) # preserve positional arguments
@@ -35,6 +46,10 @@ mawk '
 NR == 1 {
     printDepth="'$outputDepth'";
     samples = (NF - 3) / 3;
+    useSamples="'${useSamples:-0}'";
+    if (useSamples > 0) {
+        samples = (useSamples > samples) ? samples : useSamples;
+    }
     printf("Chr\tStart\tRef");
     for (s=0;s++<samples;) {
         if (printDepth) {

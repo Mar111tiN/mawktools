@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# short version of cleanpileup
 ### cleans output from samtools mpileup where only Chr, Start, and the read data has been left
 # Chr   Start   Read1 Read2 Read3
 # this can be done with pon2cols tool or deliberate cutting
