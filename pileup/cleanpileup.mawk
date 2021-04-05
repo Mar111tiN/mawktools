@@ -6,12 +6,43 @@
 # .. which might accidentally contain such traces
 # next, the A+12T for inserts and the T-12A for deletions will be converted to I/i and D/d
 
+# creates headers
+####### ARGPARSE ##################
+PARAMS=""
+while (( "$#" )); do
+    # allow for equal sign in long-format options
+    [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
+    case "$1" in
+        # output depth
+        -d|--output_depth)
+        outputDepth=1;
+        shift;
+        ;;
+        -*|--*=) # unsupported flags
+        echo "<filterBed> Error: Unsupported flag $1" >&2
+        exit 1
+        ;;
+        *) # preserve positional arguments
+        PARAMS="$PARAMS $1"
+        shift
+        ;;
+    esac
+done
+
+
+
 mawk '
 NR == 1 {
+    printDepth="'$outputDepth'";
     samples = (NF - 3) / 3;
     printf("Chr\tStart\tRef");
     for (s=0;s++<samples;) {
-        printf("\tDepth%s\tRead%s",s,s);
+        if (printDepth) {
+            printf("\tDepth%s\tRead%s",s,s);
+        } else {
+            printf("\tRead%s",s);
+        }
+        
     }
     printf("\n");
 }
@@ -50,7 +81,11 @@ NR == 1 {
             }
             $col = pre base post;
         }
-        printf("\t%s\t%s",$(col-1),$col);
+        if (printDepth) {
+            printf("\t%s\t%s",$(col-1),$col);
+        } else {
+            printf("\t%s",$col);
+        }
     }
     printf("\n");
 }   '
