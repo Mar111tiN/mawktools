@@ -72,7 +72,7 @@ BEGIN {
     if (filterChrom != "chr"){ # no filterChrom given --> filterChrom == "chr"
         # adjust the chrom-pattern for exact chrom match
         filterChrom = "^" filterChrom "\t";
-        printf("<filterBed> Filtering chromosome %s|\n", filterChrom) > "/dev/stderr";
+        printf("<filterBed> Filtering chromosome %s\n", filterChrom) > "/dev/stderr";
     }
     readBed=1;
     bedCount=0; 
@@ -83,7 +83,7 @@ BEGIN {
 
 readBed {
     # print(filterChrom);
-    if  ($0 !~ "Chr\tStart\t") { # reading bedFile line with right chromosome
+    if  ($0 !~ "Chr\t") { # reading bedFile line with right chromosome
         # store the bed regions as blocks in BEDSTART and BEDEND
         if ( $0 !~ filterChrom ) {
             next;
