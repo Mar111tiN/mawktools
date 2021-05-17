@@ -1,10 +1,8 @@
 #!/bin/sh
 
-# file with genomic pos in Pos (!MUST HAVE HEADER!!) | filterBed <bedfile> [-x ..useExonicCoords] [-c chrom ..which chrom to use; default all]
-# filters any position-based file to positions included in a bed file
-# takes bedfile and as parameter
-# works only on stdin in a pipe
-
+# splits tabular file with Chr in first column into chromosome files into folder
+# usage: chromSplit.mawk file -f splitFolder
+# if input is gzipped, output is also gzipped
 
 ####### ARGPARSE ##################
 PARAMS=""
@@ -41,8 +39,9 @@ done
 # # set positional arguments in their proper place
 eval set -- "$PARAMS"
 
-
-
+# create directory if needed
+splitFolder=${folder-"./split"}
+mkdir -p $splitFolder
 
 
 
@@ -50,7 +49,7 @@ eval set -- "$PARAMS"
 mawk '
 BEGIN {
     file="'$1'";
-    splitFolder="'${folder-"./split"}'";
+    splitFolder="'$splitFolder'";
     # add the slash if missing
     gsub(/([^/])$/, "&/", splitFolder);
     printf("<chromSplit> Splitting file %s by chrom into %s\n", file, splitFolder) > "/dev/stderr";
@@ -63,6 +62,7 @@ BEGIN {
         } else {
             ext = ".gz"
         }
+        zipped=1;
 
     } else {
         readcmd = "cat " file " 2>/dev/null ";
@@ -96,9 +96,20 @@ BEGIN {
         if (currentChrom != chrom) {
             currentChrom = chrom;
             splitFile = splitFolder base "." chrom ext;
-            print(header)>splitFile;
+            if (zipped==1) {
+                # first empty print to open stream
+                # print the header
+                printf("") | "gzip > " splitFile;
+                print(header) | "gzip >> " splitFile;
+            } else  {
+                print(header) > splitFile;
+            }
             printf("<chromSplit> Writing %s to %s\n", currentChrom, splitFile) > "/dev/stderr";
         }
-        print($0)>>splitFile;
+        if (zipped==1) {
+            print($0) | "gzip >> " splitFile;
+        } else  {
+            print($0) >> splitFile;
+        }
     }
 }'
