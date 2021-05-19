@@ -69,9 +69,9 @@ WINDOW=${WINDOW-100};
 stepSize=${stepSize-10};
 LINE=${LINE-50};
 
-echo "stepSize:" $stepSize;
-echo "WINDOW:" $WINDOW;
-echo "LINE:" $LINE;
+echo "stepSize:" $stepSize >> /dev/stderr;
+echo "WINDOW:" $WINDOW >> /dev/stderr;
+echo "LINE:" $LINE >> /dev/stderr;
 
 ################################
 # SPLIT LINES
@@ -275,4 +275,4 @@ END {
         # else, up the pointer (pointer > L --> L=1)
         pointer = (pointer)%L + 1;
     }
-}' | gzip
+}'
