@@ -1,5 +1,5 @@
 #!/bin/sh
-
+#v1.0.1
 # file with genomic pos in Pos (!MUST HAVE HEADER!!) | filterBed <bedfile> [-x ..useExonicCoords] [-c chrom ..which chrom to use; default all]
 # filters any position-based file to positions included in a bed file
 # takes bedfile and as parameter
@@ -71,8 +71,8 @@ BEGIN {
     
     if (filterChrom != "chr"){ # no filterChrom given --> filterChrom == "chr"
         # adjust the chrom-pattern for exact chrom match
-        filterChrom = "^" filterChrom "\t";
         printf("<filterBed> Filtering chromosome %s\n", filterChrom) > "/dev/stderr";
+        filterChrom = "^" filterChrom "\t";
     }
     readBed=1;
     bedCount=0; 
