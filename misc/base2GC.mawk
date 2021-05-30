@@ -2,7 +2,7 @@
 
 # USAGE:
 # cat chrom.fa | base2GC
-# [     w | --window-size           <Int=100>                   size of rolling window for GC ratio ]
+# [     -w | --window-size           <Int=100>                   size of rolling window for GC ratio ]
 # [     -s | --step-size            <INT=10>                    distance of adjacent windows        ]
 # [     -l | --genome-line-length   <INT=50>                    line length of input genome file    ] 
 
@@ -98,7 +98,7 @@ NR == 1 {
 }' | mawk '
 
 ###############################
-COMPUTE PRIMARY WINDOW
+# COMPUTE PRIMARY WINDOW
 ###############################
 
 NR ==1 {
@@ -157,8 +157,6 @@ NR==1 {
 
 
 function update(minus, plus) {
-
-
 
     # remove TAIL
     SUM -= minus;
