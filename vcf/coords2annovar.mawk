@@ -48,7 +48,7 @@ NR > 1 { # data line
 }
 ############# HEADER ###################
 NR == 1 {
-  printf("%s\t%s\t%s",$1,"Start","End");
+  printf("#%s\t%s\t%s",$1,"Start","End");
   for (i=2;i++<NF;) {
     printf("\t%s",$i);
   }
