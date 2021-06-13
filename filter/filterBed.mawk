@@ -124,7 +124,7 @@ writeHeader { # check for existence of header and print out
     writeHeader = 0;
     readData = 1;
     chromCount = 1;
-    currentChrom = CHROMNAME[1]; # reset the current chrom to the first one
+    currentChrom = "chrKlaus"; # reset the current chrom to something silly
 
     # for (cc in CHROMSTART) {
     #   print(cc, CHROMSTART[cc]);
@@ -153,8 +153,8 @@ readData {  # switching to data
     # move to the right chromosome in the read file
     # should best be already done in the samtools file
     if (chrom != currentChrom) {
-        chromCount = 1;
-        currentChrom = CHROMCOUNT[chromCount]
+        chromCount = 0;
+        currentChrom = CHROMCOUNT[chromCount];
         bedPointer = CHROMSTART[currentChrom];
         while  (chrom != currentChrom) {
             currentChrom = CHROMCOUNT[++chromCount];
