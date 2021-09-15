@@ -8,7 +8,7 @@
 # stdout can be piped into 10xcov2pileup
 
 mawk '
-BEGIN {
+BEGI {
     ################ BAM2CSV TRANSLATOR ###################
 
     # get strand orientation of transcript for adjusting Cigar location
@@ -34,7 +34,7 @@ BEGIN {
 }
 
 ##### PROCESS LINES #################
- $0 ~ "'$1'" && $0 ~ "CB:Z:" {  # process only lines containing the TransID
+ $0 ~ "CB:Z:" {  # process only lines containing the TransID
     # get TAGS 
     for (col=0; col++ < fieldCount;) {
       # create the pattern from the DataField and the value format field  (like CB:Z:ATTGCCTG)
