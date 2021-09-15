@@ -124,7 +124,7 @@ writeHeader { # check for existence of header and print out
     writeHeader = 0;
     readData = 1;
     chromCount = 1;
-    currentChrom = CHROMNAME[1]; # reset the current chrom to the first one
+    currentChrom = "chrKlaus"; # reset the current chrom to something silly
 
     # for (cc in CHROMSTART) {
     #   print(cc, CHROMSTART[cc]);
@@ -152,11 +152,18 @@ readData {  # switching to data
     if (chrom in CHROMSTART == 0) next;
     # move to the right chromosome in the read file
     # should best be already done in the samtools file
-    while (chrom != currentChrom) {
-        currentChrom = CHROMCOUNT[++chromeCount];
+    if (chrom != currentChrom) {
+        chromCount = 0;
+        currentChrom = CHROMCOUNT[chromCount];
         bedPointer = CHROMSTART[currentChrom];
-        
+        while  (chrom != currentChrom) {
+            currentChrom = CHROMCOUNT[++chromCount];
+            if (currentChrom in CHROMSTART == 0) next;
+            bedPointer = CHROMSTART[currentChrom];
+        }
+        printf("<filterBed> %s\n",currentChrom)  > "/dev/stderr";
     }
+
     # cycle through the bedRegions
     while (pos >= BEDSTART[bedPointer] ) { # if pos downstream of current bedRegion, drop line silently
         #print(bedPointer, BEDSTART[bedPointer], BEDEND[bedPointer], pos);
