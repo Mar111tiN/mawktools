@@ -1,0 +1,18 @@
+total 4
+drwxr-xr-x   6 martinszyska  staff   192B Apr 27 07:22 10x/
+drwxr-xr-x   5 martinszyska  staff   160B Apr 27 07:22 CNV/
+-rw-r--r--   1 martinszyska  staff     0B Apr 27 07:22 Dockerfile
+drwxr-xr-x   7 martinszyska  staff   224B Apr 27 07:22 bam/
+drwxr-xr-x   5 martinszyska  staff   160B Apr 27 07:22 cov/
+-rw-r--r--   1 martinszyska  staff   805B Apr 27 07:22 creating_symlinks.rtf
+drwxr-xr-x   4 martinszyska  staff   128B Apr 27 07:22 fastq/
+drwxr-xr-x   6 martinszyska  staff   192B Apr 27 07:22 filter/
+drwxr-xr-x   3 martinszyska  staff    96B Apr 27 07:22 manual/
+drwxr-xr-x   6 martinszyska  staff   192B Apr 27 09:46 mawktest/
+drwxr-xr-x  12 martinszyska  staff   384B Apr 27 07:22 misc/
+drwxr-xr-x   5 martinszyska  staff   160B Apr 27 07:22 pileup/
+drwxr-xr-x   4 martinszyska  staff   128B Apr 27 09:45 snippets/
+drwxr-xr-x  33 martinszyska  staff   1.0K Apr 27 07:22 symlinxMBP2/
+drwxr-xr-x  32 martinszyska  staff   1.0K Apr 27 07:22 symlinxMBP3/
+-rw-r--r--   1 martinszyska  staff     0B Apr 27 11:01 test.txt
+drwxr-xr-x   9 martinszyska  staff   288B Apr 27 07:22 vcf/

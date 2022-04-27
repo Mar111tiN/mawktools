@@ -8,7 +8,7 @@
 # stdout can be piped into 10xcov2pileup
 
 mawk '
-BEGI {
+BEGIN {
     ################ BAM2CSV TRANSLATOR ###################
 
     # get strand orientation of transcript for adjusting Cigar location
