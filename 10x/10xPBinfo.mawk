@@ -31,7 +31,6 @@ BEGIN {  ### GET/WRITE HEADER
     }
     # middle bases
     while (match(info, "[ACTG][ACTG]+")) {
-        # print("======", info);
         info = substr(info,1,RSTART-1) RLENGTH "N" substr(info, RSTART+RLENGTH);
     }
     # end bases

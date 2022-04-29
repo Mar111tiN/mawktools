@@ -3,13 +3,13 @@
 
 # >>>10xPBsplit<<<
 # v0.9
-# takes a fastq(gz) file preprocessed with <extractPBAdapters
-# and filters for sequences containing 25N[TSO]> / <[TSO]25N
+# takes a fastq(gz) file preprocessed with <10xPBfilter>
+# and splits sequences of facing 10x structures { N[TSO]>N<[TSO]N } into separate fastq
 
 # USAGE: 
 # gunzip < fastq.gz |  10xPBextract [options] | 10xPBfilter -i | 10xPBsplit
 # [     -m | --minSize             <INT=40>                     minimum size for middle sequence               ]
-# [     O | --Overlap             <INT=74>                     sequence overlap between left and right split  ]
+# [      O | --Overlap             <INT=74>                     sequence overlap between left and right split  ]
 
 ####### ARGPARSE ##################
 PARAMS=""
@@ -65,7 +65,7 @@ $3~ /N\[TSO\]>N<\[TSO\]N/ {
     shortInfo=$3;
     seq=$4;
     qual=$5;
-    print($0);
+
     # get the center sequence and its size
     # check for minSize
 

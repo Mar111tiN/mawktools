@@ -7,7 +7,7 @@
 # and filters for sequences containing 25N[TSO]> / <[TSO]25N
 
 # USAGE: 
-# gunzip < fastq.gz | extractPBadapters [options] | filter10xPB
+# gunzip < fastq.gz | 10xPBextract [options] | 10xPBfilter
 # [     -i | --fullInfo            <Flag=False>                 set if full structure should be output    ]
 # [     -C | --CBlength            <INT=16>                     set length of cellular barcode            ]
 # [     -U | --UMIlength           <INT=10>                     set length of UMI                         ]
@@ -28,10 +28,10 @@ while (( "$#" )); do
         -C|--CBlength)
         if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
             CBlength=$2
-            shilt 2
+            shift 2
         else
             echo "<10xPBfilter> Error: Param CBlength is missing\n[-C|--CBlength]" >&2
-            exlt 1
+            exit 1
         fi
         ;;
         # UMIlength
@@ -69,10 +69,13 @@ BEGIN {
     # params
     fullInfo='${fullInfo=0}';
     CBlength='${CBlength-16}';
-    UMILlngth='${UMIlength-10}';
+    UMIlength='${UMIlength-10}';
     Del='${Del-1}';
     LMAX=CBlength + UMIlength - Del;
     printf("<l0xPBfilter> Filtering for 10x signature [CBlength=%s|UMIlength=%s|fullInfo=%s]\n", CBlength, UMIlength, fullInfo) >> "/dev/stderr";
+}
+{
+    has10xSignature=0;
 }
 $3~ /N\[TSO\]>/ {
     info=$2;
@@ -89,20 +92,32 @@ $3~ /N\[TSO\]>/ {
         # remove excessive >
         gsub("\]>>+", "]>", $4);
         gsub("\]>>+", "]>", $5);
-        if (fullInfo==1) {
-            print($1,$2,$3,$4);
-        } else {
-            print($1,$3,$4);
-        }
-        
+        has10xSignature=1;
     }
-
 }
 $3~ /<\[TSO\]N/ {
-    # remove excessive >
-    gsub("<+<\[", "<[", $3);
-    gsub("<+<\[", "<[", $4);
-    
-    print($1,$2,$3,$4);
+        info=$2;
+    # check for N=>25
+    lmax=0
+    while (match(info, /<\[TSO\][1-9][0-9]+N/)) {
+        l = substr(info, RSTART+6,RLENGTH-7);
+        info = substr(info, RSTART+RLENGTH) 
+        if (l > lmax) {
+            lmax=l;
+        }
     }
+    if (lmax>=LMAX) {
+        # remove excessive <
+        gsub("<+<\[", "<[", $4);
+        gsub("<+<\[", "<[", $5);
+        has10xSignature=1; 
+    }
+}
+has10xSignature {
+    if (fullInfo==1) {
+            print($1,$2,$3,$4,$5);
+        } else {
+            print($1,$3,$4,$5);
+        }
+}
 '
