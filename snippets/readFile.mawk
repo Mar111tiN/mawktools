@@ -14,7 +14,7 @@ BEGIN {
     file = "'${1-"stream"}'";
     # allow for writing the word "stream" as arg
     file = (tolower(file) == "stream") ? "stream" : file;
-    PONexclude='${PONexclude-0}';
+
     # setting read command depending on file extension
     if (file != "stream") {
         if (file ~ /.gz$/) {
