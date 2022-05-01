@@ -3,6 +3,8 @@
 
 # >>>10xPBfilter<<<
 # v0.9
+# v0.9.1 -- fix bug causing non-similar fastq output
+# --> v.0.9.2 --> make CB+UMI length flexible (now hardcoded as 26)
 # takes a fastq(gz) file preprocessed with the 10xPB toolchain components:
 #     <10xPB2fastq>    |      transforms into one-line data and extracts the relevant oligo adapter sequences
 # --> <10xPBinfo>      |      adds a long and a short info field discribing the sequence structure with regard to known adapters
@@ -14,6 +16,7 @@
 # USAGE: 
 # gunzip < fastq.gz |  10xPBextract [options] | 10xPBinfo | 10xPBfilter -i | 10xPBsplit | 10xPBclean | 10xPB2fastq
 # [     -o | --output_prefix       <Path to file>               output prefix for _R1.fastq and _R2.fastq file    ]
+# [     -s | --min_seq_length      <Int=25>                     minimum length of sequence after TSO              ]
 # [     -m | --max_mismatch        <Int=10>                     exit after N non-conform structures               ]
 
 ####### ARGPARSE ##################
@@ -32,10 +35,24 @@ while (( "$#" )); do
             exit 1
         fi
         ;;
-        # number of hits
-        -h|--Nhits)
+        # maxMismatch
+        -s|--min_seq_length)
         if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
-            Nhits=$2
+            minSeqLength=$2
+            shift 2
+        else
+            echo "<10xPB2fastq> Error: Value for param min_seq_length is missing\n[-s|--min_seq_length]" >&2
+            exit 1
+        fi
+        ;;
+        -*|--*=) # unsupported flags
+        echo "<10xPB2fastq> Error: Unsupported flag $1" >&2
+        exit 1
+        ;;
+        # maxMismatch
+        -m|--max_mismatch)
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+            maxMismatch=$2
             shift 2
         else
             echo "<10xPB2fastq> Error: Value for param max_mismatch is missing\n[-m|--max_mismatch]" >&2
@@ -56,6 +73,7 @@ BEGIN {
     OFS="\t";
 
     # params
+    minSeqLength='${minSeqLength-25}';
     maxMismatch='${maxMismatch-10}';
     outPrefix="'${outPrefix-""}'";
     if (outPrefix == "") {
@@ -65,26 +83,43 @@ BEGIN {
     # set the file
     read1File=outPrefix "_R1.fastq";
     read2File=outPrefix "_R2.fastq";
-    printf("<10xPB2fastq> Splitting 10xPB seq into %s (CB+UMI) and _2.fastq\n", read1File) >> "/dev/stderr";
+    printf("<10xPB2fastq> Splitting 10xPB seq into %s (CB+UMI) and _R2.fastq\n", read1File) >> "/dev/stderr";
     misMatchCount=0;
 }
 ############# READ MATCHING LINES #########################
 $2 ~ /N\[TSO\]>/ {
     info=$2;
-    # check for N=>25
-    lmax=0
-    while (match(info, /[1-9][0-9]+N\[TSO\]>/)) {
-        l = substr(info, RSTART,RLENGTH-7);
-        info = substr(info, RSTART+RLENGTH) 
-        if (l > lmax) {
-            lmax=l;
-        }
+    seq=$3;
+    qual=$4;
+    # extract the lengths
+
+    match(info, /[0-9]+N\[TSO\]>/);
+    xLength = substr(info,1,RLENGTH-7);
+    match(info, /\[TSO\]>[0-9]+N/);
+    seqLength = substr(info, RSTART+6,RLENGTH-7);
+
+    # check for minSeqLength
+    if (int(seqLength)<int(minSeqLength)) {
+        next;
     }
-    if (lmax>=LMAX) {
-        # remove excessive >
-        gsub("\]>>+", "]>", $4);
-        gsub("\]>>+", "]>", $5);
-        has10xSignature=1;
+
+    # add one random base for xLength=25
+    if (xLength == 25) {
+        seq= "G" seq;
+        qual="X" qual;
+        xLength = 26;
+    }
+    
+    # extract the xSeq
+    xSeq = substr(seq, xLength-25,26);
+    xQual = substr(qual, xLength-25,26);
+    if (xLength>25) {
+        printf("@%s\n%s\n+\n%s\n", $1,xSeq, xQual) >> read1File;
+        # extract the dataSeq
+        dataStart = xLength + 7;
+        dataSeq = substr(seq, dataStart);
+        dataQual = substr(qual, dataStart);
+        printf("@%s\n%s\n+\n%s\n", $1,dataSeq, dataQual) >> read2File;
     }
 }
 ############# EXIT @NON-MATCHING LINES #########################
@@ -95,15 +130,17 @@ $2 !~ /N\[TSO\]>/ {
     if (misMatchCount>maxMismatch) {
         print("<10xPB2fastq> Detected read with un-cleaned data (please process your data with 10xPBclean tool!)\n") >> "/dev/stderr";
         for (i=0;i++<misMatchCount;) {
-            printf("Read%s\t[%s]\n", $1,$2)
+            printf("Read%s\t[%s]\n", $1,$2) >> "/dev/stderr";
         }
     }
 }
 ############# END  #########################
 END { # OUTPUT NON-MATCHING LINES
-    printf("<10xPB2fastq> Detected very few (%s) read with un-cleaned data (please check reads!)\n", misMatchCount) >> "/dev/stderr";
-    for (i=0;i++<misMatchCount;) {
-        printf("@%s\t[%s]\n", MMREAD[i],MMINFO[i]);
+    if (misMatchCount > 0) {
+        printf("<10xPB2fastq> Detected very few (%s) read with un-cleaned data (please check reads!)\n", misMatchCount) >> "/dev/stderr";
+        for (i=0;i++<misMatchCount;) {
+            printf("@%s\t[%s]\n", MMREAD[i],MMINFO[i]) >> "/dev/stderr";
+        }
     }
-}
-'
+
+}'
