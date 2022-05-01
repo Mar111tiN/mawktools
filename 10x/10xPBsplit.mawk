@@ -1,13 +1,16 @@
 #!/bin/sh
 
-
 # >>>10xPBsplit<<<
 # v0.9
-# takes a fastq(gz) file preprocessed with <10xPBfilter>
-# and splits sequences of facing 10x structures { N[TSO]>N<[TSO]N } into separate fastq
+# takes a fastq(gz) file preprocessed with the 10xPB toolchain components:
+#     <10xPBextract>   |      transforms into one-line data and extracts the relevant oligo adapter sequences
+# --> <10xPBinfo>      |      adds a long and a short info field discribing the sequence structure with regard to known adapters
+# --> <10xPBfilter>    |      filters for sequences containing 25N[TSO]> / <[TSO]25N
+# and splits sequences with facing 10xSignature components into two separate lines
+#   also updates the info fields
 
 # USAGE: 
-# gunzip < fastq.gz |  10xPBextract [options] | 10xPBfilter -i | 10xPBsplit
+# gunzip < fastq.gz |  10xPBextract [options] | 10xPBinfo | 10xPBfilter -i | 10xPBsplit
 # [     -m | --minSize             <INT=40>                     minimum size for middle sequence               ]
 # [      O | --Overlap             <INT=74>                     sequence overlap between left and right split  ]
 
@@ -45,9 +48,8 @@ while (( "$#" )); do
 done
 
 
-
-
 mawk '
+############# BEGIN #########################
 BEGIN {
     OFS="\t";
     minSize='${minSize-40}';
@@ -60,6 +62,7 @@ BEGIN {
     printf("<10xPBsplit> Splitting overlapping sequences [minSize=%s|Overlap=%s%s]\n", minSize, Overlap, perc) >> "/dev/stderr";
 }
 
+############# READ MATCHING LINES #########################
 $3~ /N\[TSO\]>N<\[TSO\]N/ {
     info=$2;
     shortInfo=$3;
@@ -100,6 +103,8 @@ $3~ /N\[TSO\]>N<\[TSO\]N/ {
     }
     next;
 }
+
+############# READ NON-MATCHING LINES #########################
 {
     # for all other structures, just pass through the data
     print($0);

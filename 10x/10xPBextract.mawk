@@ -13,7 +13,6 @@
 # [     -h | --Nhits               <Int=3>                      stop searching after N hits in seq      ]
 # [     -r | --readPrefix          <STR>                        unique starting string for read name    ]
 
-
 ####### ARGPARSE ##################
 PARAMS=""
 while (( "$#" )); do
@@ -69,16 +68,6 @@ done
 eval set -- "$PARAMS"
 
 mawk '
-############## functions ######################
-function revcomp(seq) {
-    revseq="";
-    len=split(seq,SEQ,"");
-    for (l=0;l++<len;) {
-        revseq=revseq REV[SEQ[len-l+1]];
-    }
-    return revseq
-}
-
 ############# BEGIN #########################
 BEGIN {  ### GET/WRITE HEADER
     ##### params and args (with defaults)
@@ -97,7 +86,7 @@ BEGIN {  ### GET/WRITE HEADER
     readCMD = "cat " oligoFile " 2>/dev/null "
     # first line is header and is not needed 
     if ((readCMD | getline) == 0) { 
-        printf("<toolName> File %s not found!\n", file) > "/dev/stderr";
+        printf("<10xPBextract> File %s not found!\n", file) > "/dev/stderr";
         exit;
     }
 
@@ -156,11 +145,16 @@ BEGIN {  ### GET/WRITE HEADER
     FS="\n";
     OFS="\t";
 }
-
-# remove the readPrefix from first line
-NR==1{
-    $1=substr($1,length(RS));
+############## FUNCTIONS ######################
+function revcomp(seq) {
+    revseq="";
+    len=split(seq,SEQ,"");
+    for (l=0;l++<len;) {
+        revseq=revseq REV[SEQ[len-l+1]];
+    }
+    return revseq
 }
+
 function search_replace(pattern,tag) {
     while (match(seq, pattern)) { 
         ls=substr(seq,1,RSTART-1);
@@ -170,12 +164,15 @@ function search_replace(pattern,tag) {
         rs=substr(qual,RSTART+RLENGTH);
         qual=ls tag rs;
         hits++;
-        #### 
-        # print("H",pattern,hits);
-        ####
     }
 }
+############# READ FIRST LINE #########################
 
+NR==1 {  # remove the readPrefix from first line
+    $1=substr($1,length(RS));
+}
+
+############# READ LINES #########################
 {   
     seq=$2;
     qual=$4;

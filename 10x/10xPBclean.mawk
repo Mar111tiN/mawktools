@@ -18,7 +18,7 @@
 
 
 mawk '
-################ INIT #########################
+################ BEGIN #########################
 BEGIN {
     OFS="\t";
     printf("<10xPBclean> Isolating 10x sequences of structure  N[TSO]>N | N<[TSO]N \n") >> "/dev/stderr";
@@ -30,7 +30,7 @@ BEGIN {
     REV["|"]="|";
 }
 
-############## functions ######################
+############## FUNCTIONS ######################
 function rev(qual) {
     gsub(/<\[TSO\]/, ">]OST[", qual);
     revqual="";
@@ -40,7 +40,6 @@ function rev(qual) {
     }
     return revqual
 }
-
 
 function revcomp(seq) {
     # mask the TSO tag
@@ -54,6 +53,7 @@ function revcomp(seq) {
     gsub(/\|/, "[TSO]>", revseq);
     return revseq
 }
+
 function revertInfo(info) {
         match(info, /[0-9]+N<\[TSO/);
         N2=substr(info,1,RLENGTH-5);
@@ -63,6 +63,7 @@ function revertInfo(info) {
         return info
 }
 
+############# READ MATCHING LINES #########################
 $3~ /N\[TSO\]\>/ {
     info=$2;
     shortInfo=$3;
@@ -112,6 +113,7 @@ $3~ /N\[TSO\]\>/ {
     }
 }
 
+############# READ MATCHING LINES #########################
 $3~ /<\[TSO\]N/ {
     info=$2;
     shortInfo=$3;
