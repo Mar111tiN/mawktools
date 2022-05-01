@@ -3,6 +3,7 @@
 
 # >>>10xPBclean<<<
 # v0.9
+# v0.9.1 -- fix counter bug (always incrementing)
 # takes a fastq(gz) file preprocessed with the 10xPB toolchain components:
 #     <10xPBextract>   |      transforms into one-line data and extracts the relevant oligo adapter sequences
 # --> <10xPBinfo>      |      adds a long and a short info field discribing the sequence structure with regard to known adapters
@@ -13,7 +14,6 @@
 
 # USAGE: 
 # gunzip < fastq.gz |  10xPBextract [options] | 10xPBinfo | 10xPBfilter -i | 10xPBsplit | 10xPBclean
-
 
 
 
