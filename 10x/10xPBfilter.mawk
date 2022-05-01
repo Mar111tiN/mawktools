@@ -2,6 +2,7 @@
 
 # >>>10xPB2fastq<<<
 # v0.9
+# v0.9.1  --- fix bug with > or < string in qual string (erroneously removed)
 # takes a fastq(gz) file preprocessed with the 10xPB toolchain components:
 #     <10xPBextract>   |      transforms into one-line data and extracts the relevant oligo adapter sequences
 # --> <10xPBinfo>      |      adds a long and a short info field discribing the sequence structure with regard to known adapters
@@ -83,12 +84,12 @@ BEGIN {
 
 ############# READ LINES #########################
 {
+    info=$2;
     has10xSignature=0;
 }
 
 ############# READ MATCHING LINES #########################
 $3~ /N\[TSO\]>/ {
-    info=$2;
     # check for N=>25
     lmax=0
     while (match(info, /[1-9][0-9]+N\[TSO\]>/)) {
@@ -99,16 +100,12 @@ $3~ /N\[TSO\]>/ {
         }
     }
     if (lmax>=LMAX) {
-        # remove excessive >
-        gsub("\]>>+", "]>", $4);
-        gsub("\]>>+", "]>", $5);
         has10xSignature=1;
     }
 }
 
 ############# READ MATCHING LINES #########################
 $3~ /<\[TSO\]N/ {
-        info=$2;
     # check for N=>25
     lmax=0
     while (match(info, /<\[TSO\][1-9][0-9]+N/)) {
@@ -119,19 +116,29 @@ $3~ /<\[TSO\]N/ {
         }
     }
     if (lmax>=LMAX) {
-        # remove excessive <
-        gsub("<+<\[", "<[", $4);
-        gsub("<+<\[", "<[", $5);
         has10xSignature=1; 
     }
 }
 
 ############# READ LINES @CONDITION #########################
 has10xSignature {
+    seq=$4;
+    qual=$5;
+    # remove excessive >
+    while (match(seq, /\]>>+/)) {
+        seq = substr(seq, 1, RSTART+1) substr(seq,RSTART+RLENGTH);
+        qual = substr(qual, 1, RSTART+1) substr(qual,RSTART+RLENGTH);
+    }
+    # remove excessive <
+    while (match(seq, /<+<\[/)) {
+        seq = substr(seq, 1, RSTART-1) substr(seq,RSTART+RLENGTH-2);
+        qual = substr(qual, 1, RSTART-1) substr(qual,RSTART+RLENGTH-2);
+    }
+
     if (fullInfo==1) {
-            print($1,$2,$3,$4,$5);
+            print($1,$2,$3,seq,qual);
         } else {
-            print($1,$3,$4,$5);
+            print($1,$3,seq,qual);
         }
 }
 '
