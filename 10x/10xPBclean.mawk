@@ -3,16 +3,16 @@
 
 # >>>10xPBclean<<<
 # v0.9
-# takes a fastq(gz) file preprocessed with <10xPBsplit>
+# takes a fastq(gz) file preprocessed with the 10xPB toolchain components:
+#     <10xPBextract>   |      transforms into one-line data and extracts the relevant oligo adapter sequences
+# --> <10xPBinfo>      |      adds a long and a short info field discribing the sequence structure with regard to known adapters
+# --> <10xPBfilter>    |      filters for sequences containing 25N[TSO]> / <[TSO]25N
+# --> <10xPBsplit>     |      splits sequences with facing 10xSignature components into two separate lines
 # and isolates 10x data { N[TSO]>N or N<[TSO]N } into clean data lines
-# !!! is very computation-intensive --> outsource the revcomp functionality
+# !!! is very computation-intensive -->v0.9.1: outsource the revcomp functionality
 
 # USAGE: 
-# gunzip < fastq.gz |  10xPBextract [options] | 10xPBfilter -i | 10xPBsplit | 10xPBclean
-
-
-
-
+# gunzip < fastq.gz |  10xPBextract [options] | 10xPBinfo | 10xPBfilter -i | 10xPBsplit | 10xPBclean
 
 
 
@@ -63,46 +63,104 @@ function revertInfo(info) {
         return info
 }
 
-
-($3~ /N\[TSO\]\>/) || ($3~ /<\[TSO\]N/) {
+$3~ /N\[TSO\]\>/ {
     info=$2;
     shortInfo=$3;
     seq=$4;
     qual=$5;
 
-    # init Counter
-    count=1;
-
-    # isolate L-data
-    while (match(seq, /[ATGC]+\[TSO\]>[ATGC]+/)) {
-        outSeq=substr(seq,RSTART,RLENGTH);
-        outQual=substr(qual,RSTART,RLENGTH);
-        seq=substr(seq, 1,RSTART-1) substr(seq,RSTART+RLENGTH);
-        qual=substr(qual, 1,RSTART-1) substr(qual,RSTART+RLENGTH);
-
-        (match(info, /[0-9]+N\[TSO\]>[0-9]+N/));
+    # use fullInfo field for extracting the sequences
+    while (match(info, /[0-9]+N\[TSO\]>[0-9]+N/)) {
+        # get starting coords in seq from N-expansion
+        # adding to rstart by all <INT>N
+        seqStart=RSTART;
+        seqLength=RLENGTH;
+        # get the upstream info for seq-coord update
+        preInfo=substr(info, 1,RSTART-1);
+        # get the output info field (the match)
         outInfo=substr(info,RSTART,RLENGTH);
-        info=substr(info, 1,RSTART-1) substr(info,RSTART+RLENGTH);
+        # update the info field (remove left-side+match)
+        info=substr(info,RSTART+RLENGTH);
+
+        # >>>DEBUG
+        # printf("%s\t", preInfo);
+        # printf("%s\t%s\t", $1, seq);
+        # >>>DEBUG
+
+        while (match(preInfo, /[0-9]+N/)) {
+            # increase seqStart by N
+            seqStart = seqStart + substr(preInfo, RSTART,RLENGTH - 1) - RLENGTH;
+            preInfo = substr(preInfo, RSTART+RLENGTH);
+        }
+
+        match(outInfo, /^[0-9]+N/)
+        # increase seqLength by N from outInfo
+        seqLength = seqLength + substr(outInfo, RSTART,RLENGTH-1) - RLENGTH;
+        match(outInfo, /[0-9]+N$/)
+        # increase seqLength by N from outInfo
+        seqLength = seqLength + substr(outInfo, RSTART,RLENGTH-1) - RLENGTH;
+        # print(seqStart, seqLength);
+
+        # update seq and qual
+        outSeq=substr(seq,seqStart, seqLength);
+        outQual=substr(qual,seqStart, seqLength);
+        seq=substr(seq,seqStart+seqLength);
+        qual=substr(qual,seqStart+seqLength);
+
+        ##### OUTPUT ###################
         print($1 count++, outInfo, outSeq, outQual);
     }
-    
-    # isolate R-data
-    while (match(seq, /[ATGC]+<\[TSO\][ATGC]+/)) {
-        outSeq=substr(seq,RSTART,RLENGTH);
-        outQual=substr(qual,RSTART,RLENGTH);
-        seq=substr(seq, 1,RSTART-1) substr(seq,RSTART+RLENGTH);
-        qual=substr(qual, 1,RSTART-1) substr(qual,RSTART+RLENGTH);
+}
 
-        (match(info, /[0-9]+N<\[TSO\][0-9]+N/));
+$3~ /<\[TSO\]N/ {
+    info=$2;
+    shortInfo=$3;
+    seq=$4;
+    qual=$5;
+
+    # use fullInfo field for extracting the sequences
+    while (match(info, /[0-9]+N<\[TSO\][0-9]+N/)) {
+        # get starting coords in seq from N-expansion
+        # adding to rstart by all <INT>N
+        seqStart=RSTART;
+        seqLength=RLENGTH;
+        # get the upstream info for seq-coord update
+        preInfo=substr(info, 1,RSTART-1);
+        # get the output info field (the match)
         outInfo=substr(info,RSTART,RLENGTH);
-        info=substr(info, 1,RSTART-1) substr(info,RSTART+RLENGTH);
+        # update the info field (remove left-side+match)
+        info=substr(info,RSTART+RLENGTH);
 
-        ### --> maybe outsource this component to the next process
-        # reverse complement
+        # >>>DEBUG
+        # printf("%s\t", preInfo);
+        # printf("%s\t%s\t", $1, seq);
+        # >>>DEBUG
+        
+        while (match(preInfo, /[0-9]+N/)) {
+            # increase seqStart by N
+            seqStart = seqStart + substr(preInfo, RSTART,RLENGTH - 1) - RLENGTH;
+            preInfo = substr(preInfo, RSTART+RLENGTH);
+        }
+
+        match(outInfo, /^[0-9]+N/)
+        # increase seqLength by N from outInfo
+        seqLength = seqLength + substr(outInfo, RSTART,RLENGTH-1) - RLENGTH;
+        match(outInfo, /[0-9]+N$/)
+        # increase seqLength by N from outInfo
+        seqLength = seqLength + substr(outInfo, RSTART,RLENGTH-1) - RLENGTH;
+        # print(seqStart, seqLength);
+
+        # update seq and qual
+        outSeq=substr(seq,seqStart, seqLength);
+        outQual=substr(qual,seqStart, seqLength);
+        seq=substr(seq,seqStart+seqLength);
+        qual=substr(qual,seqStart+seqLength);
+#         ### --> maybe outsource this component to the next process
+        reverse complement
         outInfo=revertInfo(outInfo);
         outSeq=revcomp(outSeq);
         outQual=rev(outQual);
-        print($1 "<" count++, outInfo, outSeq, outQual);
+        ##### OUTPUT ###################
+        print($1 count++, outInfo, outSeq, outQual);
     }
-}
-'
+}'
