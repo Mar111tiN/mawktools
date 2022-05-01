@@ -75,6 +75,7 @@ BEGIN {
     # params
     minSeqLength='${minSeqLength-25}';
     maxMismatch='${maxMismatch-10}';
+    minXLength=25;
     outPrefix="'${outPrefix-""}'";
     if (outPrefix == "") {
         printf("<10xPB2fastq> No output prefix provided. Using \"PBextracted_R1|2.fastq\"!\n") >> "/dev/stderr";
@@ -95,6 +96,10 @@ $2 ~ /N\[TSO\]>/ {
 
     match(info, /[0-9]+N\[TSO\]>/);
     xLength = substr(info,1,RLENGTH-7);
+
+    # check for minXLength
+    if (int(xLength)<int(minXLength)) next;
+
     match(info, /\[TSO\]>[0-9]+N/);
     seqLength = substr(info, RSTART+6,RLENGTH-7);
 
@@ -113,14 +118,13 @@ $2 ~ /N\[TSO\]>/ {
     # extract the xSeq
     xSeq = substr(seq, xLength-25,26);
     xQual = substr(qual, xLength-25,26);
-    if (xLength>25) {
-        printf("@%s\n%s\n+\n%s\n", $1,xSeq, xQual) >> read1File;
-        # extract the dataSeq
-        dataStart = xLength + 7;
-        dataSeq = substr(seq, dataStart);
-        dataQual = substr(qual, dataStart);
-        printf("@%s\n%s\n+\n%s\n", $1,dataSeq, dataQual) >> read2File;
-    }
+    
+    printf("@%s\n%s\n+\n%s\n", $1,xSeq, xQual) >> read1File;
+    # extract the dataSeq
+    dataStart = xLength + 7;
+    dataSeq = substr(seq, dataStart);
+    dataQual = substr(qual, dataStart);
+    printf("@%s\n%s\n+\n%s\n", $1,dataSeq, dataQual) >> read2File;
 }
 ############# EXIT @NON-MATCHING LINES #########################
 $2 !~ /N\[TSO\]>/ {
