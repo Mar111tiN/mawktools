@@ -62,7 +62,9 @@ function revertInfo(info) {
         info=N1 "[TSO]>" N2;
         return info
 }
-
+{
+    count=1;
+}
 ############# READ MATCHING LINES #########################
 $3~ /N\[TSO\]\>/ {
     info=$2;
