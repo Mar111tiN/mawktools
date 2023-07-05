@@ -253,7 +253,7 @@ readData { # only becomes active after the header scan
   if (FL) { # only if Format tags are requested
     for (s=0; s++<sampleCount;) {
       for (i=spexCount+IL; i++<spexCount+IL+FL;) {
-        line=SAMPLES[s] "-" FTAGNAME[FIELDS[i]];
+        line=SAMPLES[s] "_" FTAGNAME[FIELDS[i]];
         printf("\t%s",line);
       }
     }
