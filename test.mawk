@@ -1,19 +1,4 @@
 #!/bin/sh
-
-#v2.0
-
-# tool to transpose vcf files into tab-separated tsv files
-# dynamically takes arguments to shape output parameters
-# output from FORMAT fields is dynamically split per sample (sample name is taken from header)
-# output from INFO field is auto-detected as Flag and converted to +/- output
-
-# USAGE: 
-# cat file.vcf | vcf2csv -s Chr,Pos,Ref,Alt -i 
-# [     -s | --specs]     <FIELD,[FIELD,...]>                             these fields of the official vcf specs are output unchanged                                                                           ]
-# [     -i | --info       <FIELD[:FieldName],[FIELD[:FieldName],...]>     these tags of the info field are extracted and output in column FIELD (opt. FieldName)                                                ]
-# [     -f | --format     <FIELD[:FieldName],[FIELD[:FieldName],...]>     these tags of the format field are extracted from the sample-value field and output in column Sample_FIELD (opt. Sample_FieldName)    ]
-
-
 ####### ARGPARSE ##################
 PARAMS=""
 while (( "$#" )); do
@@ -92,15 +77,13 @@ BEGIN {
   # Tags to extract data from FORMAT column
   # provide in format Tag:Header,Tag[:Header],..)
   # optional Header is used in HeaderColumns
-  # different presets are: 
+  # different defaults are: 
   common_all="G5A:MinorAlleleAllPop>5,G5:MinorAllele+1";
   dbSNP="FREQ:AlleleFreq,VC:VariantClass";
   varscan="SS:somaticStatus,GPV:variantP,SPV:somaticP,DP:Depth,RD:R1,AD:R2,DP4:readCounts";
-  Mutect2="DP:Depth,AD:Alleles,F1R2:Fwd,F2R1:Rwd,SB:Strand"
-  other="CDP:Depth,AF:VAF"
 
   # from args
-  ftags="'${ftags-"DP:Depth,AD:Alleles,F1R2:Fwd,F2R1:Rwd,SB:Strand"}'";
+  ftags="'${ftags-"CDP:Depth,AF:VAF"}'";
   # split the ftags into arrays
   ftagsCount = split(ftags, FTAGS, ",");
 
@@ -123,9 +106,6 @@ BEGIN {
 
   # ITAGS #############
   # tags to extract from INFO column
-  # presets:
-  # Mutect2: "PON:PoN,SB:Strand,MMQ,MBQ"
-
   itags="'${itags:-""}'";
   # split the itags into arrays
   itagsCount = split(itags, ITAGS, ",");
@@ -200,6 +180,8 @@ readData { # only becomes active after the header scan
   if ((length(ftags) == 0) && (length(itags) == 0)) next; # skip if there are no tags to use
   for (i=0; i++<ftagsCount;) {
     tag=FTAGS[i];
+
+    ftagLen=length(ftag);  ### ????
     # make regex pattern
     pattern="##FORMAT=<ID=" tag ",";
     if (match($0, pattern)) {
@@ -209,6 +191,7 @@ readData { # only becomes active after the header scan
 
   for (i=0; i++<itagsCount;) {
     tag=ITAGS[i];
+    itagLen=length(tag);  ### ????
     # make regex pattern
     pattern="##INFO=<ID=" tag ",";
     if (match($0, pattern)) {
