@@ -340,8 +340,8 @@ readData { # only becomes active after the header scan
   }
 
   # FORMAT TAGS
-  for (f=0;f++<FL;) {
-    for (s=0;s++<sampleCount;){
+  for (s=0;s++<sampleCount;){
+    for (f=0;f++<FL;) {
       FIELDS[++fieldPos]=FORMAT[f];
     }
   }
