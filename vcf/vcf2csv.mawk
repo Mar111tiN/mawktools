@@ -7,13 +7,20 @@
 # output from FORMAT fields is dynamically split per sample (sample name is taken from header)
 # output from INFO field is auto-detected as Flag and converted to +/- output
 # v2.1>> output from FUNC field (FUNC=[{<'FIELD':'VALUE'}]) is extracted with -F/--func option
+# v2.2>> add -S flag for simple sample names (1_<FIELD>, .... 2_<FIELD>)
 
 # USAGE: 
-# cat file.vcf | vcf2csv -s "Chr,Pos,Ref,Alt" -i 
+# cat file.vcf | vcf2csv 
+#    -s "Chr,Pos,Ref,Alt" 
+#    -f "DP:Depth,AD:Alleles" 
+#    -i "SB:Strand,MMQ,MBQ"
+#    -F "gene:Gene,coding:Nchange,protein:AAchange"
+#    -S
 # [ -s | --specs]     <FIELD,[FIELD,...]>                             these fields of the official vcf specs are output unchanged                                                                           ]
 # [ -i | --info       <FIELD[:FieldName],[FIELD[:FieldName],...]>     these tags of the info field are extracted and output in column FIELD (opt. FieldName)                                                ]
+# [ -F | --FUNC       <FIELD[:FieldName],[FIELD[:FieldName],...]>     these tags of the FUNC field are extracted from the sample-value field and output in column FIELD (opt. FieldName)                    ]
 # [ -f | --format     <FIELD[:FieldName],[FIELD[:FieldName],...]>     these tags of the format field are extracted from the sample-value field and output in column Sample_FIELD (opt. Sample_FieldName)    ]
-
+# [ -S | --sss | simple_sample_names]     FLAG                        if set, the sample names in the data header are not used for naming the format columns (for >1 samples, <FIELD>_N is used)            ]
 
 ####### ARGPARSE ##################
 PARAMS=""
@@ -201,15 +208,28 @@ readData { # only becomes active after the header scan
   for (i=1; i++<spexCount;) {
     printf("\t%s",$SPEXCOL[FIELDS[++fieldPos]]);
   }
+  ####### Extracting FUNC ###############
+
+  tag="FUNC";
+  tagLen=length(tag)+1;
+  pattern="[\t;]" tag "=\[\{[^\\t;$\\]}]+\}\]";
+
+  if (match($8, pattern)) {
+    # storing FUNC key values in func variable and stripping quotes
+    func=substr($8,RSTART+tagLen+3,RLENGTH-tagLen-5);
+    gsub("\x27", "", func);
+    # removing FUNC from INFO variable (necessary?)
+    $8=substr($8,1,RSTART-1) substr($8,RSTART+RLENGTH);
+  }
+
 
   ######## INFO FIELDS ##########
   for (i=0; i++< IL;) {
     tag=FIELDS[++fieldPos];
     tagLen=length(tag)+1;
-    pattern="[\t;]" tag "(=[^\\t;$]+)?[\t;]";
-    # print($8);
+    pattern=tag "(=[^\\t;$]+)?";
     if (match($8, pattern)) {
-      value=substr($8,RSTART+tagLen+1,RLENGTH-tagLen-2);
+      value=substr($8,RSTART+tagLen,RLENGTH-tagLen);
       if (value == "") {
         value="+";
       }
@@ -219,20 +239,7 @@ readData { # only becomes active after the header scan
     }
   }
 
-  ####### Extracting FUNC ###############
-  if (FUNCount) {
-    tag="FUNC";
-    tagLen=length(tag)+1;
-    pattern="[\t;]" tag "=\[\{[^\\t;$\\]}]+\}\]";
 
-    if (match($8, pattern)) {
-      # storing FUNC key values in func variable and stripping quotes
-      func=substr($8,RSTART+tagLen+3,RLENGTH-tagLen-5);
-      gsub("\x27", "", func);
-      # removing FUNC from INFO variable (necessary?)
-      # $8=substr($8,1,RSTART-1) substr($8,RSTART+RLENGTH);
-    }
-  }
   ######## FUNC FIELDS ##########
   for (i=0; i++< FUNCount;) {
     tag=FIELDS[++fieldPos];
@@ -301,11 +308,16 @@ readData { # only becomes active after the header scan
 
   # get Sample Flag from args
   simpleNames='${simpleNames-0}'
-  print(simpleNames);
   for (col=9; col++<NF;) {  # count columns after FORMAT field
     sampleCount++;
-    SAMPLES[++s]=$col;  # get the sample names
+    if (simpleNames) {
+      SAMPLES[++s]=s "_";
+    } else {
+      SAMPLES[++s]=$col "_";  # get the sample names
+    }
   }
+  # remove name for single sample in simpleSample mode
+  if (simpleNames && (sampleCount ==1)) SAMPLES[1]="";
 
   # FL is switch for processing of FORMAT data in the read part
   # allocate the found tags to the FIELD array in order INFO --> FUNC --> FORMAT
@@ -348,7 +360,7 @@ readData { # only becomes active after the header scan
 
   for (s=0; s++<sampleCount;) {
     for (i=0; i++<FL;) {
-      line=SAMPLES[s] "_" FTAGNAME[FIELDS[++printPos]];
+      line=SAMPLES[s] FTAGNAME[FIELDS[++printPos]]
       printf("\t%s",line);
     }
   }

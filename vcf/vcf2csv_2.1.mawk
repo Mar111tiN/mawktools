@@ -208,15 +208,28 @@ readData { # only becomes active after the header scan
   for (i=1; i++<spexCount;) {
     printf("\t%s",$SPEXCOL[FIELDS[++fieldPos]]);
   }
+  ####### Extracting FUNC ###############
+
+  tag="FUNC";
+  tagLen=length(tag)+1;
+  pattern="[\t;]" tag "=\[\{[^\\t;$\\]}]+\}\]";
+
+  if (match($8, pattern)) {
+    # storing FUNC key values in func variable and stripping quotes
+    func=substr($8,RSTART+tagLen+3,RLENGTH-tagLen-5);
+    gsub("\x27", "", func);
+    # removing FUNC from INFO variable (necessary?)
+    $8=substr($8,1,RSTART-1) substr($8,RSTART+RLENGTH);
+  }
+
 
   ######## INFO FIELDS ##########
   for (i=0; i++< IL;) {
     tag=FIELDS[++fieldPos];
     tagLen=length(tag)+1;
-    pattern="[\t;]" tag "(=[^\\t;$]+)?[\t;]";
-    # print($8);
+    pattern=tag "(=[^\\t;$]+)?";
     if (match($8, pattern)) {
-      value=substr($8,RSTART+tagLen+1,RLENGTH-tagLen-2);
+      value=substr($8,RSTART+tagLen,RLENGTH-tagLen);
       if (value == "") {
         value="+";
       }
@@ -226,20 +239,7 @@ readData { # only becomes active after the header scan
     }
   }
 
-  ####### Extracting FUNC ###############
-  if (FUNCount) {
-    tag="FUNC";
-    tagLen=length(tag)+1;
-    pattern="[\t;]" tag "=\[\{[^\\t;$\\]}]+\}\]";
 
-    if (match($8, pattern)) {
-      # storing FUNC key values in func variable and stripping quotes
-      func=substr($8,RSTART+tagLen+3,RLENGTH-tagLen-5);
-      gsub("\x27", "", func);
-      # removing FUNC from INFO variable (necessary?)
-      # $8=substr($8,1,RSTART-1) substr($8,RSTART+RLENGTH);
-    }
-  }
   ######## FUNC FIELDS ##########
   for (i=0; i++< FUNCount;) {
     tag=FIELDS[++fieldPos];
