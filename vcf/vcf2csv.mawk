@@ -21,6 +21,11 @@ while (( "$#" )); do
     # allow for equal sign in long-format options
     [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
     case "$1" in
+        ### FLAG for simple sample names
+        -S|--simple_sample_names|--sss)
+        simpleNames=1;
+        shift
+        ;;
         # standard field output
         -s|--specs)
         if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
@@ -267,7 +272,6 @@ readData { # only becomes active after the header scan
   next;
 }
 
-
 /^##/ { HEADER RUN
   ### get INFO on FIELDS and alocate to info and format arrays
   if (!(FCount || ICount)) next; # skip if there are no tags to use
@@ -294,6 +298,10 @@ readData { # only becomes active after the header scan
 }
 /^#/ { ###### reached the DATA column header of the VCF file
   # get the number and names of the samples defined in format
+
+  # get Sample Flag from args
+  simpleNames='${simpleNames-0}'
+  print(simpleNames);
   for (col=9; col++<NF;) {  # count columns after FORMAT field
     sampleCount++;
     SAMPLES[++s]=$col;  # get the sample names
