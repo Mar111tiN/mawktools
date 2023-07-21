@@ -216,6 +216,7 @@ readData { # only becomes active after the header scan
 
   if (match($8, pattern)) {
     # storing FUNC key values in func variable and stripping quotes
+    # + 3 comes from =[{  , -5 comes from removing the 3 again and another }]
     func=substr($8,RSTART+tagLen+3,RLENGTH-tagLen-5);
     gsub("\x27", "", func);
     # removing FUNC from INFO variable (necessary?)
@@ -226,10 +227,15 @@ readData { # only becomes active after the header scan
   ######## INFO FIELDS ##########
   for (i=0; i++< IL;) {
     tag=FIELDS[++fieldPos];
-    tagLen=length(tag)+1;
-    pattern=tag "(=[^\\t;$]+)?";
+    pattern="(;|^)" tag "(=[^\\t;]+)?(;|$)";
     if (match($8, pattern)) {
-      value=substr($8,RSTART+tagLen,RLENGTH-tagLen);
+      startSkip=length(tag)+1;
+      # skip the ; if at start
+      if (substr($8,RSTART,1) == ";") startSkip++;
+      endSkip=startSkip;
+      # skip the ; at the end
+      if (substr($8,RSTART+RLENGTH-1,1) == ";") endSkip++;
+      value=substr($8,RSTART+startSkip,RLENGTH-endSkip);
       if (value == "") {
         value="+";
       }
@@ -239,16 +245,16 @@ readData { # only becomes active after the header scan
     }
   }
 
-
   ######## FUNC FIELDS ##########
   for (i=0; i++< FUNCount;) {
     tag=FIELDS[++fieldPos];
-    tagLen=length(tag)+1;
+
     pattern=tag ":[^:]+[,$]";
     # print(pattern);
     # print($8);
     if (match(func, pattern)) {
-      value=substr(func,RSTART+tagLen,RLENGTH-tagLen-1);
+      startSkip=length(tag)+1;
+      value=substr(func,RSTART+startSkip,RLENGTH-startSkip-1);
       if (value == "") {
         value="+";
       }
