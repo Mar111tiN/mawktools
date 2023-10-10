@@ -11,12 +11,12 @@
 
 # USAGE: 
 # cat file.vcf | vcf2csv 
-#    -s "Chr,Pos,Ref,Alt" 
-#    -f "DP:Depth,AD:Alleles" 
-#    -i "SB:Strand,MMQ,MBQ"
-#    -F "gene:Gene,coding:Nchange,protein:AAchange"
+#    -s Chr,Pos,Ref,Alt 
+#    -f DP:Depth,AD:Alleles
+#    -i SB:Strand,MMQ,MBQ
+#    -F gene:Gene,coding:Nchange,protein:AAchange
 #    -S
-# [ -s | --specs]     <FIELD,[FIELD,...]>                             these fields of the official vcf specs are output unchanged                                                                           ]
+# [ -s | --specs]     <FIELD,[FIELD,...]>                             these fields of the official vcf specs are output unchanged. Use snakecase colnames (Chr,Pos,ID,Ref,Alt,Qual,Filter)                                                                          ]
 # [ -i | --info       <FIELD[:FieldName],[FIELD[:FieldName],...]>     these tags of the info field are extracted and output in column FIELD (opt. FieldName)                                                ]
 # [ -F | --FUNC       <FIELD[:FieldName],[FIELD[:FieldName],...]>     these tags of the FUNC field are extracted from the sample-value field and output in column FIELD (opt. FieldName)                    ]
 # [ -f | --format     <FIELD[:FieldName],[FIELD[:FieldName],...]>     these tags of the format field are extracted from the sample-value field and output in column Sample_FIELD (opt. Sample_FieldName)    ]
@@ -35,7 +35,7 @@ while (( "$#" )); do
         ;;
         # standard field output
         -s|--specs)
-        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; thenc
             spexOut=$2
             shift 2
         else
