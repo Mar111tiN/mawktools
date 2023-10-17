@@ -35,7 +35,7 @@ while (( "$#" )); do
         ;;
         # standard field output
         -s|--specs)
-        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; thenc
+        if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
             spexOut=$2
             shift 2
         else
