@@ -30,9 +30,13 @@ NR > 1 { # data line
       # make the pos of deleted bases to start and end
       start=start+1;
       end=start + RL -2;
+
+      ###### new update ########
+      if (A == substr(R,1,1)) {             
+        R=substr(R,2);
+        A="-";
+      }
       # remove the redundant base in Ref and Alt
-      R=substr(R,2);
-      A="-";
   } else { # it is a simple SNP
       end = start;
   }
