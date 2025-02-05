@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #v2.1
 
@@ -24,7 +24,7 @@
 
 ####### ARGPARSE ##################
 PARAMS=""
-while (( "$#" )); do
+while (( $# )); do
     # allow for equal sign in long-format options
     [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
     case "$1" in
@@ -85,7 +85,8 @@ while (( "$#" )); do
         ;;
     esac
 done
-
+echo $PARAMS
+echo "HALLO"
 # only use the header
 mawk '
 BEGIN {

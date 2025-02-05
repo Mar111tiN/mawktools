@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 #v2.1
 
@@ -23,7 +23,6 @@
 # [ -S | --sss | simple_sample_names]     FLAG                        if set, the sample names in the data header are not used for naming the format columns (for >1 samples, <FIELD>_N is used)            ]
 
 ####### ARGPARSE ##################
-PARAMS=""
 while (( "$#" )); do
     # allow for equal sign in long-format options
     [[ $1 == --*=* ]] && set -- "${1%%=*}" "${1#*=}" "${@:2}"
@@ -286,6 +285,20 @@ readData { # only becomes active after the header scan
 }
 
 /^##/ { HEADER RUN
+
+  ### get tumor and normal sample into variables
+    # these are stored in array eg: TN[234]="N_" TN[234]="T_"
+    if ($0 ~ /^##normal_sample=/) {
+      split($0, a, "=")
+      N = a[2]
+      # 
+      TN[N]="N_"
+  } else if ($0 ~ /^##tumor_sample=/) {
+      split($0, a, "=")
+      T = a[2]
+      TN[T]="T_"
+  }
+
   ### get INFO on FIELDS and alocate to info and format arrays
   if (!(FCount || ICount)) next; # skip if there are no tags to use
 
@@ -324,6 +337,12 @@ readData { # only becomes active after the header scan
   }
   # remove name for single sample in simpleSample mode
   if (simpleNames && (sampleCount ==1)) SAMPLES[1]="";
+
+  if (simpleNames && (sampleCount ==2) && N != "") {
+    # exchange the tumor/normal numerics with T and N
+    SAMPLES[1]=TN[$10];
+    SAMPLES[2]=TN[$11];
+    }
 
   # FL is switch for processing of FORMAT data in the read part
   # allocate the found tags to the FIELD array in order INFO --> FUNC --> FORMAT
